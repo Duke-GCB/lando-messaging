@@ -7,5 +7,8 @@ setup(name='lando_messaging',
       author='John Bradley',
       author_email='john.bradley@duke.edu',
       license='MIT',
-      packages=['pika'],
+      packages=['lando_messaging'],
+      install_requires=[
+         'pika==0.10.0',
+      ],
      )
