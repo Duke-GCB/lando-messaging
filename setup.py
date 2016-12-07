@@ -7,5 +7,5 @@ setup(name='lando_messaging',
       author='John Bradley',
       author_email='john.bradley@duke.edu',
       license='MIT',
-      packages=['pika==0.10.0'],
+      packages=['pika'],
      )
