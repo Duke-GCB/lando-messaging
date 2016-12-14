@@ -1,0 +1,6 @@
+machine:
+  services:
+    - docker
+dependencies:
+  pre:
+    - pip install docker-py

@@ -10,8 +10,10 @@ class JobCommands(object):
     Names of all the commands that are sent through the queue.
     """
     START_JOB = 'start_job'                                  # webserver -> lando
+    RESTART_JOB = 'restart_job'                              # webserver -> lando
     CANCEL_JOB = 'cancel_job'                                # webserver -> lando and lando -> lando_worker
 
+    WORKER_STARTED = 'worker_started'                        # lando_worker -> lando
     STAGE_JOB = 'stage_job'                                  # lando -> lando_worker
     STAGE_JOB_COMPLETE = 'stage_job_complete'                # lando_worker -> lando
     STAGE_JOB_ERROR = 'stage_job_error'                      # lando_worker -> lando
@@ -28,7 +30,9 @@ class JobCommands(object):
 # Commands that lando will receive.
 LANDO_INCOMING_MESSAGES = [
     JobCommands.START_JOB,
+    JobCommands.RESTART_JOB,
     JobCommands.CANCEL_JOB,
+    JobCommands.WORKER_STARTED,
     JobCommands.STAGE_JOB_COMPLETE,
     JobCommands.STAGE_JOB_ERROR,
     JobCommands.RUN_JOB_COMPLETE,
@@ -102,6 +106,17 @@ class StartJobPayload(object):
         self.job_id = job_id
 
 
+class RestartJobPayload(object):
+    """
+    Payload that to be sent with JobCommands.RESTART_JOB to lando.
+    """
+    def __init__(self, job_id):
+        """
+        :param job_id: int: job id we want to have lando restart.
+        """
+        self.job_id = job_id
+
+
 class CancelJobPayload(object):
     """
     Payload that to be sent with JobCommands.CANCEL_JOB to lando.
@@ -111,6 +126,17 @@ class CancelJobPayload(object):
         :param job_id: int: job id we want to have lando cancel.
         """
         self.job_id = job_id
+
+
+class WorkerStartedPayload(object):
+    """
+    Payload that to be sent with JobCommands.WORKER_STARTED to lando.
+    """
+    def __init__(self, worker_queue_name):
+        """
+        :param worker_queue_name: str: name of the AMQP queue for the worker who just launched
+        """
+        self.worker_queue_name = worker_queue_name
 
 
 class StageJobPayload(object):

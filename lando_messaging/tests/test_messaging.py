@@ -21,8 +21,14 @@ class FakeLando(object):
     def start_job(self, payload):
         self.start_job_payload = payload
 
+    def restart_job(self, payload):
+        self.restart_job_payload = payload
+
     def cancel_job(self, payload):
         self.cancel_job_payload = payload
+
+    def worker_started(self, payload):
+        self.worker_started_payload = payload
 
     def stage_job_complete(self, payload):
         self.stage_job_complete_payload = payload
@@ -99,6 +105,11 @@ class TestMessagingAndClients(TestCase):
         lando_client.start_job(job_id=1)
         # Send message to fake_lando to cancel job 2
         lando_client.cancel_job(job_id=2)
+        # Send message to fake_lando to restart job 33
+        lando_client.restart_job(job_id=33)
+
+        # Send message to fake_lando that the worker VM has finished launching
+        lando_client.worker_started("test")
 
         # Messages sent to lando from a lando_worker after receiving a message from lando
         stage_job_payload = StageJobPayload(credentials=None, job_id=3, input_files=[], vm_instance_name='test')
@@ -122,6 +133,7 @@ class TestMessagingAndClients(TestCase):
         router.run()
         self.assertEqual(fake_lando.start_job_payload.job_id, 1)
         self.assertEqual(fake_lando.cancel_job_payload.job_id, 2)
+        self.assertEqual(fake_lando.restart_job_payload.job_id, 33)
 
         self.assertEqual(fake_lando.stage_job_complete_payload.job_id, 3)
         self.assertEqual(fake_lando.stage_job_error_payload.message, "Oops1")

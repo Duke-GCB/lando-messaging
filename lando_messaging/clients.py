@@ -4,8 +4,10 @@ These send messages that will be recevied by MessageRouter.
 """
 from __future__ import absolute_import
 from lando_messaging.messaging import JobCommands
-from lando_messaging.messaging import StartJobPayload, CancelJobPayload, JobStepCompletePayload, JobStepErrorPayload
+from lando_messaging.messaging import StartJobPayload, RestartJobPayload, CancelJobPayload
+from lando_messaging.messaging import JobStepCompletePayload, JobStepErrorPayload
 from lando_messaging.messaging import StageJobPayload, RunJobPayload, StoreJobOutputPayload
+from lando_messaging.messaging import WorkerStartedPayload
 from lando_messaging.workqueue import WorkQueueClient
 
 
@@ -39,12 +41,27 @@ class LandoClient(object):
         """
         self.send(JobCommands.START_JOB, StartJobPayload(job_id))
 
+    def restart_job(self, job_id):
+        """
+        Continue processing job from it's current job step.
+        :param job_id: int: unique id for a job
+        """
+        self.send(JobCommands.RESTART_JOB, RestartJobPayload(job_id))
+
     def cancel_job(self, job_id):
         """
         Post a message in the queue that a running job be stopped.
         :param job_id: unique id for a job
         """
         self.send(JobCommands.CANCEL_JOB, CancelJobPayload(job_id))
+
+    def worker_started(self, worker_queue_name):
+        """
+        Post a message in the queue that a worker has just launched and will listen for commands.
+        This only sent when the VM starts up.
+        :param worker_queue_name: str: name of the AMQP queue for the worker who just launched
+        """
+        self.send(JobCommands.WORKER_STARTED, WorkerStartedPayload(worker_queue_name))
 
     def job_step_complete(self, job_request_payload):
         """
