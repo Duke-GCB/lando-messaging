@@ -87,6 +87,24 @@ class WorkQueueConnection(object):
                               ))
         self.close()
 
+    def send_durable_exchange_message(self, exchange_name, body):
+        """
+        Send a message with the specified body to an exchange.
+        :param exchange_name: str: name of the exchange to send the message into
+        :param body: str: contents of the message
+        :return Bool: True when delivery confirmed
+        """
+        self.connect()
+        channel = self.connection.channel()
+        # Fanout will send message to multiple subscribers
+        channel.exchange_declare(exchange=exchange_name, type='fanout')
+        result = channel.basic_publish(exchange=exchange_name, routing_key='', body=body,
+                                       properties=pika.BasicProperties(
+                                           delivery_mode=2,  # make message persistent
+                                       ))
+        self.close()
+        return result
+
     def receive_loop_with_callback(self, queue_name, callback):
         """
         Process incoming messages with callback until close is called.
@@ -214,3 +232,45 @@ class WorkQueueProcessor(object):
         else:
             logging.error("Unknown command: {}".format(message.command))
 
+
+class WorkProgressQueue(object):
+    """
+    Sends messages to AMQP exchange related to job progress.
+    """
+    def __init__(self, config, exchange_name):
+        """
+        Creates connection with host, username, and password from config.
+        :param config: config.Config: contains work queue configuration
+        :param exchange_name: str: name of the excahnge we will send progress messages into
+        """
+        self.connection = WorkQueueConnection(config)
+        self.exchange_name = exchange_name
+
+    def send(self, payload):
+        """
+        Send a payload to exchange to containing command and payload to the queue specified in config.
+        :param command: str: name of the command we want run by WorkQueueProcessor
+        :param payload: str: string data that will be put into the exchange's message body
+        :return Bool: True when delivery confirmed
+        """
+        result = self.connection.send_durable_exchange_message(self.exchange_name, payload)
+        logging.info("Sent message to exchange.".format(self.exchange_name))
+        return result
+
+
+class Config(object):
+    """
+    Generic configuration object that contains the work_queue_config configuration.
+    """
+    def __init__(self, host, username, password):
+        self.work_queue_config = WorkQueueConfig(host, username, password)
+
+
+class WorkQueueConfig(object):
+    """
+    Work queue configuration settings.
+    """
+    def __init__(self, host, username, password):
+        self.host = host
+        self.username = username
+        self.password = password

@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 from unittest import TestCase
 from lando_messaging.dockerutil import DockerRabbitmq
-from lando_messaging.workqueue import WorkQueueConnection, WorkQueueProcessor, WorkQueueClient
+from lando_messaging.workqueue import WorkQueueConnection, WorkQueueProcessor, WorkQueueClient, WorkProgressQueue
 
 
 class FakeConfig(object):
@@ -74,4 +74,19 @@ class TestWorkQueue(TestCase):
         # Saves value for test_work_queue_processor
         self.two_value = payload
 
+
+class TestWorkProgressQueue(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.rabbit_vm = DockerRabbitmq()
+        cls.config = FakeConfig(DockerRabbitmq.HOST, DockerRabbitmq.USER, DockerRabbitmq.PASSWORD)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.rabbit_vm.destroy()
+
+    def test_work_progress_queue_can_send_json_message(self):
+        wpq = WorkProgressQueue(self.config, "job_status")
+        result = wpq.send('{"job":16, "status":"GOOD"}')
+        self.assertEqual(True, result)
 
