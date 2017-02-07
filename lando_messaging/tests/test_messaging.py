@@ -67,7 +67,7 @@ class FakeLandoWorker(object):
 
 class FakeWorkflow(object):
     def __init__(self):
-        self.input_json = ''
+        self.job_order = ''
         self.url = ''
         self.object_name = ''
         self.output_directory = ''

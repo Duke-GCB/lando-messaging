@@ -172,7 +172,7 @@ class RunJobPayload(object):
         self.job_id = job_id
         self.cwl_file_url = workflow.url
         self.workflow_object_name = workflow.object_name
-        self.input_json = workflow.input_json
+        self.input_json = workflow.job_order
         self.output_directory = workflow.output_directory
         self.vm_instance_name = vm_instance_name
         self.success_command = JobCommands.RUN_JOB_COMPLETE
