@@ -160,7 +160,8 @@ class DelayedMessageQueue(object):
 
     def delete_queue(self, work_queue_connection):
         """
-        Delete the delayed queue. Only needed for unit testing.
+        Delete the delayed queue.
+        You will need to delete the queue if you want to change the message-ttl value.
         :param work_queue_connection: WorkQueueConnection: connection to AMQP
         """
         work_queue_connection.connect()

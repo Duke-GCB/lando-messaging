@@ -104,6 +104,7 @@ class StartJobPayload(object):
         :param job_id: int: job id we want to have lando start.
         """
         self.job_id = job_id
+        self.retry_count = 0
 
 
 class RestartJobPayload(object):

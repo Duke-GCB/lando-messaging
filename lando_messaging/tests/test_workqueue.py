@@ -152,4 +152,3 @@ class TestDelayedMessageQueue(TestCase):
 
         delayed_message_queue.delete_queue(work_queue_connection)
         self.assertEqual(self.messages_received, 2)
-
