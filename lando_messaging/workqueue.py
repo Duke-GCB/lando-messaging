@@ -123,7 +123,7 @@ class DelayedMessageQueue(object):
     def __init__(self, work_queue_connection, queue_name, delayed_queue_name, delay_ms):
         """
         Setup to send messages to queue_name after waiting for delay_ms.
-        Does this by putting the messages into a dead letter queue and using the ttl/routing settings.
+        This is accomplished by putting the messages into a dead letter queue and using the ttl settings.
         :param work_queue_connection: WorkQueueConnection: connection to AMQP
         :param queue_name: str: name of the queue we will send delayed messages into
         :param delayed_queue_name: str: name of the queue that will hold messages for a while
@@ -143,12 +143,12 @@ class DelayedMessageQueue(object):
         channel = self.work_queue_connection.create_channel(self.queue_name)
         channel.queue_bind(exchange='amq.direct', queue=self.queue_name)
 
-    def send_delayed_message(self, body):
+    def send_delayed_message(self, content):
         """
         Send a message to queue_name containing body after waiting delay_ms.
         Puts the message into a delay channel that will deliver the message after a timeout.
         :param queue_name: str: name of the queue we want to put a message on
-        :param body: content of the message we want to send
+        :param content: object: content of the message we want to send
         :param delay_ms: int: ms to wait before sending the message
         """
         self.work_queue_connection.connect()
@@ -157,7 +157,7 @@ class DelayedMessageQueue(object):
         channel.confirm_delivery()
         channel.basic_publish(exchange='',
                               routing_key=self.delayed_queue_name,
-                              body=body,
+                              body=pickle.dumps(content),
                               properties=pika.BasicProperties(
                                   delivery_mode=2,  # make message persistent
                               ))

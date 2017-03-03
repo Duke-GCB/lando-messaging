@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from unittest import TestCase
+import pickle
 from lando_messaging.dockerutil import DockerRabbitmq
 from lando_messaging.workqueue import WorkQueueConnection, WorkQueueProcessor, WorkQueueClient, WorkProgressQueue,\
     DelayedMessageQueue
@@ -117,7 +118,8 @@ class TestDelayedMessageQueue(TestCase):
 
         def processor(ch, method, properties, body):
             ch.basic_ack(delivery_tag=method.delivery_tag)
-            self.assertEqual(my_payload, body)
+            content = pickle.loads(body)
+            self.assertEqual(content, my_payload)
             # Terminate receive loop
             work_queue_connection.delete_queue(my_queue_name)
         work_queue_connection.receive_loop_with_callback(queue_name=my_queue_name, callback=processor)
@@ -141,7 +143,8 @@ class TestDelayedMessageQueue(TestCase):
 
         def processor(ch, method, properties, body):
             ch.basic_ack(delivery_tag=method.delivery_tag)
-            self.assertIn(body, [my_payload1, my_payload2])
+            content = pickle.loads(body)
+            self.assertIn(content, [my_payload1, my_payload2])
             self.messages_received += 1
             # Terminate receive loop
             if self.messages_received == 2:
