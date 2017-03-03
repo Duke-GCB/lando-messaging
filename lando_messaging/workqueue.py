@@ -119,6 +119,56 @@ class WorkQueueConnection(object):
         channel.start_consuming()
 
 
+class DelayedMessageQueue(object):
+    def __init__(self, queue_name, delayed_queue_name, delay_ms):
+        self.queue_name = queue_name
+        self.delayed_queue_name = delayed_queue_name
+        self.delay_ms = delay_ms
+
+    def setup(self, work_queue_connection):
+        work_queue_connection.connect()
+        channel = work_queue_connection.connection.channel()
+        channel.confirm_delivery()
+        channel.queue_declare(queue=self.delayed_queue_name, durable=True, arguments={
+            'x-message-ttl': self.delay_ms,
+            'x-dead-letter-exchange': 'amq.direct',
+            'x-dead-letter-routing-key': self.queue_name
+        })
+        channel = work_queue_connection.create_channel(self.queue_name)
+        channel.queue_bind(exchange='amq.direct', queue=self.queue_name)
+        work_queue_connection.close()
+
+    def send_delayed_message(self, work_queue_connection, body):
+        """
+        Send a message to queue_name containing body after waiting delay_ms.
+        Puts the message into a delay channel that will deliver the message after a timeout.
+        :param work_queue_connection: WorkQueueConnection: connection to AMQP
+        :param queue_name: str: name of the queue we want to put a message on
+        :param body: content of the message we want to send
+        :param delay_ms: int: ms to wait before sending the message
+        """
+        work_queue_connection.connect()
+        channel = work_queue_connection.connection.channel()
+        channel.confirm_delivery()
+        channel.basic_publish(exchange='',
+                              routing_key=self.delayed_queue_name,
+                              body=body,
+                              properties=pika.BasicProperties(
+                                  delivery_mode=2,  # make message persistent
+                              ))
+        work_queue_connection.close()
+
+    def delete_queue(self, work_queue_connection):
+        """
+        Delete the delayed queue. Only needed for unit testing.
+        :param work_queue_connection: WorkQueueConnection: connection to AMQP
+        """
+        work_queue_connection.connect()
+        channel = work_queue_connection.connection.channel()
+        channel.queue_delete(queue=self.delayed_queue_name)
+        work_queue_connection.close()
+
+
 class WorkRequest(object):
     """
     Request for some operation to be done that is sent over queue from WorkQueueClient to WorkQueueProcessor

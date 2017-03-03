@@ -1,7 +1,8 @@
 from __future__ import absolute_import
 from unittest import TestCase
 from lando_messaging.dockerutil import DockerRabbitmq
-from lando_messaging.workqueue import WorkQueueConnection, WorkQueueProcessor, WorkQueueClient, WorkProgressQueue
+from lando_messaging.workqueue import WorkQueueConnection, WorkQueueProcessor, WorkQueueClient, WorkProgressQueue,\
+    DelayedMessageQueue
 
 
 class FakeConfig(object):
@@ -89,4 +90,66 @@ class TestWorkProgressQueue(TestCase):
         wpq = WorkProgressQueue(self.config, "job_status")
         result = wpq.send('{"job":16, "status":"GOOD"}')
         self.assertEqual(True, result)
+
+
+class TestDelayedMessageQueue(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.rabbit_vm = DockerRabbitmq()
+        cls.config = FakeConfig(DockerRabbitmq.HOST, DockerRabbitmq.USER, DockerRabbitmq.PASSWORD)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.rabbit_vm.destroy()
+
+    def test_single_delayed_message(self):
+        """
+        Test that we can send a message through rabbit and receive it on our end.
+        """
+        my_queue_name = "testing1"
+        delay_queue_name = "testing1delay"
+        my_payload = "HEYME"
+        work_queue_connection = WorkQueueConnection(self.config)
+        delayed_message_queue = DelayedMessageQueue(my_queue_name, delay_queue_name, 5000)
+        delayed_message_queue.setup(work_queue_connection)
+        delayed_message_queue.send_delayed_message(work_queue_connection, my_payload)
+
+        work_queue_connection.connect()
+
+        def processor(ch, method, properties, body):
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            self.assertEqual(my_payload, body)
+            # Terminate receive loop
+            work_queue_connection.delete_queue(my_queue_name)
+        work_queue_connection.receive_loop_with_callback(queue_name=my_queue_name, callback=processor)
+
+        delayed_message_queue.delete_queue(work_queue_connection)
+
+    def test_two_delayed_messages(self):
+        """
+        Test that we can send a message through rabbit and receive it on our end.
+        """
+        self.messages_received = 0
+        my_queue_name = "testing1"
+        delay_queue_name = "testing1delay"
+        my_payload1 = "HEY"
+        my_payload2 = "THERE"
+        work_queue_connection = WorkQueueConnection(self.config)
+        delayed_message_queue = DelayedMessageQueue(my_queue_name, delay_queue_name, 500)
+        delayed_message_queue.setup(work_queue_connection)
+        delayed_message_queue.send_delayed_message(work_queue_connection, my_payload1)
+        delayed_message_queue.send_delayed_message(work_queue_connection, my_payload2)
+        work_queue_connection.connect()
+
+        def processor(ch, method, properties, body):
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            self.assertIn(body, [my_payload1, my_payload2])
+            self.messages_received += 1
+            # Terminate receive loop
+            if self.messages_received == 2:
+                work_queue_connection.delete_queue(my_queue_name)
+        work_queue_connection.receive_loop_with_callback(queue_name=my_queue_name, callback=processor)
+
+        delayed_message_queue.delete_queue(work_queue_connection)
+        self.assertEqual(self.messages_received, 2)
 
