@@ -120,32 +120,40 @@ class WorkQueueConnection(object):
 
 
 class DelayedMessageQueue(object):
-    def __init__(self, queue_name, delayed_queue_name, delay_ms):
+    def __init__(self, work_queue_connection, queue_name, delayed_queue_name, delay_ms):
+        """
+        Setup to send messages to queue_name after waiting for delay_ms.
+        Does this by putting the messages into a dead letter queue and using the ttl/routing settings.
+        :param work_queue_connection: WorkQueueConnection: connection to AMQP
+        :param queue_name: str: name of the queue we will send delayed messages into
+        :param delayed_queue_name: str: name of the queue that will hold messages for a while
+        :param delay_ms: int: how many milliseconds will messages wait in the dead letter queue
+        """
+        self.work_queue_connection = work_queue_connection
         self.queue_name = queue_name
         self.delayed_queue_name = delayed_queue_name
         self.delay_ms = delay_ms
 
-    def _declare_delayed_queue(self, work_queue_connection, channel):
+    def _declare_delayed_queue(self, channel):
         channel.queue_declare(queue=self.delayed_queue_name, durable=True, arguments={
             'x-message-ttl': self.delay_ms,
             'x-dead-letter-exchange': 'amq.direct',
             'x-dead-letter-routing-key': self.queue_name
         })
-        channel = work_queue_connection.create_channel(self.queue_name)
+        channel = self.work_queue_connection.create_channel(self.queue_name)
         channel.queue_bind(exchange='amq.direct', queue=self.queue_name)
 
-    def send_delayed_message(self, work_queue_connection, body):
+    def send_delayed_message(self, body):
         """
         Send a message to queue_name containing body after waiting delay_ms.
         Puts the message into a delay channel that will deliver the message after a timeout.
-        :param work_queue_connection: WorkQueueConnection: connection to AMQP
         :param queue_name: str: name of the queue we want to put a message on
         :param body: content of the message we want to send
         :param delay_ms: int: ms to wait before sending the message
         """
-        work_queue_connection.connect()
-        channel = work_queue_connection.connection.channel()
-        self._declare_delayed_queue(work_queue_connection, channel)
+        self.work_queue_connection.connect()
+        channel = self.work_queue_connection.connection.channel()
+        self._declare_delayed_queue(channel)
         channel.confirm_delivery()
         channel.basic_publish(exchange='',
                               routing_key=self.delayed_queue_name,
@@ -153,18 +161,17 @@ class DelayedMessageQueue(object):
                               properties=pika.BasicProperties(
                                   delivery_mode=2,  # make message persistent
                               ))
-        work_queue_connection.close()
+        self.work_queue_connection.close()
 
-    def delete_queue(self, work_queue_connection):
+    def delete_queue(self):
         """
         Delete the delayed queue.
         You will need to delete the queue if you want to change the message-ttl value.
-        :param work_queue_connection: WorkQueueConnection: connection to AMQP
         """
-        work_queue_connection.connect()
-        channel = work_queue_connection.connection.channel()
+        self.work_queue_connection.connect()
+        channel = self.work_queue_connection.connection.channel()
         channel.queue_delete(queue=self.delayed_queue_name)
-        work_queue_connection.close()
+        self.work_queue_connection.close()
 
 
 class WorkRequest(object):

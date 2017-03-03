@@ -110,8 +110,8 @@ class TestDelayedMessageQueue(TestCase):
         delay_queue_name = "testing1delay"
         my_payload = "HEYME"
         work_queue_connection = WorkQueueConnection(self.config)
-        delayed_message_queue = DelayedMessageQueue(my_queue_name, delay_queue_name, 5000)
-        delayed_message_queue.send_delayed_message(work_queue_connection, my_payload)
+        delayed_message_queue = DelayedMessageQueue(work_queue_connection, my_queue_name, delay_queue_name, 500)
+        delayed_message_queue.send_delayed_message(my_payload)
 
         work_queue_connection.connect()
 
@@ -122,7 +122,7 @@ class TestDelayedMessageQueue(TestCase):
             work_queue_connection.delete_queue(my_queue_name)
         work_queue_connection.receive_loop_with_callback(queue_name=my_queue_name, callback=processor)
 
-        delayed_message_queue.delete_queue(work_queue_connection)
+        delayed_message_queue.delete_queue()
 
     def test_two_delayed_messages(self):
         """
@@ -134,9 +134,9 @@ class TestDelayedMessageQueue(TestCase):
         my_payload1 = "HEY"
         my_payload2 = "THERE"
         work_queue_connection = WorkQueueConnection(self.config)
-        delayed_message_queue = DelayedMessageQueue(my_queue_name, delay_queue_name, 500)
-        delayed_message_queue.send_delayed_message(work_queue_connection, my_payload1)
-        delayed_message_queue.send_delayed_message(work_queue_connection, my_payload2)
+        delayed_message_queue = DelayedMessageQueue(work_queue_connection, my_queue_name, delay_queue_name, 400)
+        delayed_message_queue.send_delayed_message(my_payload1)
+        delayed_message_queue.send_delayed_message(my_payload2)
         work_queue_connection.connect()
 
         def processor(ch, method, properties, body):
@@ -148,5 +148,5 @@ class TestDelayedMessageQueue(TestCase):
                 work_queue_connection.delete_queue(my_queue_name)
         work_queue_connection.receive_loop_with_callback(queue_name=my_queue_name, callback=processor)
 
-        delayed_message_queue.delete_queue(work_queue_connection)
+        delayed_message_queue.delete_queue()
         self.assertEqual(self.messages_received, 2)
