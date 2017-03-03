@@ -1,6 +1,9 @@
 machine:
   services:
     - docker
+test:
+  pre:
+    - flake8 --ignore E501 lando-messaging/
 dependencies:
   pre:
     - pip install docker-py
