@@ -111,7 +111,6 @@ class TestDelayedMessageQueue(TestCase):
         my_payload = "HEYME"
         work_queue_connection = WorkQueueConnection(self.config)
         delayed_message_queue = DelayedMessageQueue(my_queue_name, delay_queue_name, 5000)
-        delayed_message_queue.setup(work_queue_connection)
         delayed_message_queue.send_delayed_message(work_queue_connection, my_payload)
 
         work_queue_connection.connect()
@@ -136,7 +135,6 @@ class TestDelayedMessageQueue(TestCase):
         my_payload2 = "THERE"
         work_queue_connection = WorkQueueConnection(self.config)
         delayed_message_queue = DelayedMessageQueue(my_queue_name, delay_queue_name, 500)
-        delayed_message_queue.setup(work_queue_connection)
         delayed_message_queue.send_delayed_message(work_queue_connection, my_payload1)
         delayed_message_queue.send_delayed_message(work_queue_connection, my_payload2)
         work_queue_connection.connect()

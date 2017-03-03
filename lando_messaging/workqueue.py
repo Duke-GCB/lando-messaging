@@ -125,10 +125,7 @@ class DelayedMessageQueue(object):
         self.delayed_queue_name = delayed_queue_name
         self.delay_ms = delay_ms
 
-    def setup(self, work_queue_connection):
-        work_queue_connection.connect()
-        channel = work_queue_connection.connection.channel()
-        channel.confirm_delivery()
+    def _declare_delayed_queue(self, work_queue_connection, channel):
         channel.queue_declare(queue=self.delayed_queue_name, durable=True, arguments={
             'x-message-ttl': self.delay_ms,
             'x-dead-letter-exchange': 'amq.direct',
@@ -136,7 +133,6 @@ class DelayedMessageQueue(object):
         })
         channel = work_queue_connection.create_channel(self.queue_name)
         channel.queue_bind(exchange='amq.direct', queue=self.queue_name)
-        work_queue_connection.close()
 
     def send_delayed_message(self, work_queue_connection, body):
         """
@@ -149,6 +145,7 @@ class DelayedMessageQueue(object):
         """
         work_queue_connection.connect()
         channel = work_queue_connection.connection.channel()
+        self._declare_delayed_queue(work_queue_connection, channel)
         channel.confirm_delivery()
         channel.basic_publish(exchange='',
                               routing_key=self.delayed_queue_name,
