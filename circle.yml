@@ -2,7 +2,7 @@ machine:
   services:
     - docker
 test:
-  pre:
+  post:
     - pip install -r devRequirements.txt
     - flake8 --ignore E501 lando-messaging/
 dependencies:
