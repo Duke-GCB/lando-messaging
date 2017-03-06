@@ -111,8 +111,8 @@ class TestDelayedMessageQueue(TestCase):
         delay_queue_name = "testing1delay"
         my_payload = "HEYME"
         work_queue_connection = WorkQueueConnection(self.config)
-        delayed_message_queue = DelayedMessageQueue(work_queue_connection, my_queue_name, delay_queue_name, 500)
-        delayed_message_queue.send_delayed_message(my_payload)
+        delayed_message_queue = DelayedMessageQueue(work_queue_connection, my_queue_name, delay_queue_name)
+        delayed_message_queue.send_delayed_message(my_payload, 500)
 
         work_queue_connection.connect()
 
@@ -136,9 +136,9 @@ class TestDelayedMessageQueue(TestCase):
         my_payload1 = "HEY"
         my_payload2 = "THERE"
         work_queue_connection = WorkQueueConnection(self.config)
-        delayed_message_queue = DelayedMessageQueue(work_queue_connection, my_queue_name, delay_queue_name, 400)
-        delayed_message_queue.send_delayed_message(my_payload1)
-        delayed_message_queue.send_delayed_message(my_payload2)
+        delayed_message_queue = DelayedMessageQueue(work_queue_connection, my_queue_name, delay_queue_name)
+        delayed_message_queue.send_delayed_message(my_payload1, 400)
+        delayed_message_queue.send_delayed_message(my_payload2, 200)
         work_queue_connection.connect()
 
         def processor(ch, method, properties, body):
