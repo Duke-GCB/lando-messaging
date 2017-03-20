@@ -143,15 +143,16 @@ class StageJobPayload(object):
     """
     Payload that to be sent with JobCommands.STAGE_JOB to lando_worker.
     """
-    def __init__(self, credentials, job_id, input_files, vm_instance_name):
+    def __init__(self, credentials, job_details, input_files, vm_instance_name):
         """
-        :param credentials: jobapi.Credentials: keys used to download files
-        :param job_id: int: job id we want to have lando download files for
+        :param job_details: object: details about job(id, name, created date, workflow version)
+        :param job_details: object: details about job(id, name, created date, workflow version)
         :param input_files: [InputFile]: list of files to download
         :param vm_instance_name: str: name of the instance lando_worker is running on (this passed back in the response)
         """
         self.credentials = credentials
-        self.job_id = job_id
+        self.job_id = job_details.id
+        self.job_details = job_details
         self.input_files = input_files
         self.vm_instance_name = vm_instance_name
         self.success_command = JobCommands.STAGE_JOB_COMPLETE
@@ -163,13 +164,14 @@ class RunJobPayload(object):
     """
     Payload that to be sent with JobCommands.RUN_JOB to lando_worker.
     """
-    def __init__(self, job_id, workflow, vm_instance_name):
+    def __init__(self, job_details, workflow, vm_instance_name):
         """
-        :param job_id: int: unique id for this job
+        :param job_details: object: details about job(id, name, created date, workflow version)
         :param workflow: jobapi.Workflow: url to workflow and parameters to use
         :param vm_instance_name: name of the instance lando_worker is running on (this passed back in the response)
         """
-        self.job_id = job_id
+        self.job_id = job_details.id
+        self.job_details = job_details
         self.cwl_file_url = workflow.url
         self.workflow_object_name = workflow.object_name
         self.input_json = workflow.job_order
@@ -184,15 +186,16 @@ class StoreJobOutputPayload(object):
     """
     Payload that to be sent with JobCommands.STORE_JOB_OUTPUT to lando_worker.
     """
-    def __init__(self, credentials, job_id, output_directory, vm_instance_name):
+    def __init__(self, credentials, job_details, output_directory, vm_instance_name):
         """
         :param credentials: jobapi.Credentials: user's credentials used to upload resulting files
-        :param job_id: int: unique id for this job
+        :param job_details: object: details about job(id, name, created date, workflow version)
         :param output_directory: jobapi.OutputDirectory: info about where we will upload the results
         :param vm_instance_name: name of the instance lando_worker is running on (this passed back in the response)
         """
         self.credentials = credentials
-        self.job_id = job_id
+        self.job_id = job_details.id
+        self.job_details = job_details
         self.dir_name = output_directory.dir_name
         self.project_id = output_directory.project_id
         self.dds_user_credentials = output_directory.dds_user_credentials

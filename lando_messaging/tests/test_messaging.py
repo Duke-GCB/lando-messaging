@@ -14,6 +14,11 @@ class FakeConfig(object):
         self.work_queue_config = self
 
 
+class FakeJobDetails(object):
+    def __init__(self, job_id):
+        self.id = job_id
+
+
 class FakeLando(object):
     def __init__(self):
         self.router = None
@@ -112,19 +117,21 @@ class TestMessagingAndClients(TestCase):
         lando_client.worker_started("test")
 
         # Messages sent to lando from a lando_worker after receiving a message from lando
-        stage_job_payload = StageJobPayload(credentials=None, job_id=3, input_files=[], vm_instance_name='test')
+        stage_job_payload = StageJobPayload(credentials=None, job_details=FakeJobDetails(3), input_files=[],
+                                            vm_instance_name='test')
         # Send message to fake_lando that some stage job is complete
         lando_client.job_step_complete(stage_job_payload)
         # Send message to fake_lando that some stage job had an error
         lando_client.job_step_error(stage_job_payload, "Oops1")
 
-        run_job_payload = RunJobPayload(job_id=4, workflow=FakeWorkflow(), vm_instance_name='test')
+        run_job_payload = RunJobPayload(job_details=FakeJobDetails(4), workflow=FakeWorkflow(), vm_instance_name='test')
         # Send message to fake_lando that a job has been run
         lando_client.job_step_complete(run_job_payload)
         # Send message to fake_lando that a job failed while running
         lando_client.job_step_error(run_job_payload, "Oops2")
 
-        store_job_ouput_payload = StoreJobOutputPayload(None, 5, FakeOutputDirectory(), vm_instance_name='test')
+        store_job_ouput_payload = StoreJobOutputPayload(None, FakeJobDetails(5), FakeOutputDirectory(),
+                                                        vm_instance_name='test')
         # Send message to fake_lando that we finished storing output
         lando_client.job_step_complete(store_job_ouput_payload)
         # Send message to fake_lando that we had an error while storing output
@@ -155,10 +162,11 @@ class TestMessagingAndClients(TestCase):
                                command_names=LANDO_WORKER_INCOMING_MESSAGES)
         fake_lando_worker.router = router
 
-        lando_worker_client.stage_job(credentials=None, job_id=1, input_files=[], vm_instance_name='test1')
-        lando_worker_client.run_job(job_id=2, workflow=FakeWorkflow(), vm_instance_name='test2')
-        lando_worker_client.store_job_output(credentials=None, job_id=3, output_directory=FakeOutputDirectory(),
-                                             vm_instance_name='test3')
+        lando_worker_client.stage_job(credentials=None, job_details=FakeJobDetails(1), input_files=[],
+                                      vm_instance_name='test1')
+        lando_worker_client.run_job(job_details=FakeJobDetails(2), workflow=FakeWorkflow(), vm_instance_name='test2')
+        lando_worker_client.store_job_output(credentials=None, job_details=FakeJobDetails(3),
+                                             output_directory=FakeOutputDirectory(), vm_instance_name='test3')
 
         router.run()
         self.assertEqual(fake_lando_worker.stage_job_payload.job_id, 1)
