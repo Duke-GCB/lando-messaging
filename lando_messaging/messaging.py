@@ -146,7 +146,6 @@ class StageJobPayload(object):
     def __init__(self, credentials, job_details, input_files, vm_instance_name):
         """
         :param job_details: object: details about job(id, name, created date, workflow version)
-        :param job_details: object: details about job(id, name, created date, workflow version)
         :param input_files: [InputFile]: list of files to download
         :param vm_instance_name: str: name of the instance lando_worker is running on (this passed back in the response)
         """
