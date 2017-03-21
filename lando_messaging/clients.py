@@ -124,13 +124,6 @@ class LandoWorkerClient(object):
         payload = StoreJobOutputPayload(credentials, job_details, output_directory, vm_instance_name)
         self._send(JobCommands.STORE_JOB_OUTPUT, payload)
 
-    def cancel_job(self, job_id):
-        """
-        Request that the worker cancel a currently running job.
-        :param job_id: int: unique id for the job we want to cancel
-        """
-        self._send(JobCommands.CANCEL_JOB, job_id)
-
     def _send(self, command, payload):
         """
         Send a message over work queue to worker.
