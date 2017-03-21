@@ -97,7 +97,7 @@ class MessageRouter(object):
 
 class StartJobPayload(object):
     """
-    Payload that to be sent with JobCommands.START_JOB to lando.
+    Payload to be sent with JobCommands.START_JOB to lando.
     """
     def __init__(self, job_id):
         """
@@ -108,7 +108,7 @@ class StartJobPayload(object):
 
 class RestartJobPayload(object):
     """
-    Payload that to be sent with JobCommands.RESTART_JOB to lando.
+    Payload to be sent with JobCommands.RESTART_JOB to lando.
     """
     def __init__(self, job_id):
         """
@@ -119,7 +119,7 @@ class RestartJobPayload(object):
 
 class CancelJobPayload(object):
     """
-    Payload that to be sent with JobCommands.CANCEL_JOB to lando.
+    Payload to be sent with JobCommands.CANCEL_JOB to lando.
     """
     def __init__(self, job_id):
         """
@@ -130,7 +130,7 @@ class CancelJobPayload(object):
 
 class WorkerStartedPayload(object):
     """
-    Payload that to be sent with JobCommands.WORKER_STARTED to lando.
+    Payload to be sent with JobCommands.WORKER_STARTED to lando.
     """
     def __init__(self, worker_queue_name):
         """
@@ -141,10 +141,11 @@ class WorkerStartedPayload(object):
 
 class StageJobPayload(object):
     """
-    Payload that to be sent with JobCommands.STAGE_JOB to lando_worker.
+    Payload to be sent with JobCommands.STAGE_JOB to lando_worker.
     """
     def __init__(self, credentials, job_details, input_files, vm_instance_name):
         """
+        :param credentials: jobapi.Credentials: keys used to download files
         :param job_details: object: details about job(id, name, created date, workflow version)
         :param input_files: [InputFile]: list of files to download
         :param vm_instance_name: str: name of the instance lando_worker is running on (this passed back in the response)
@@ -161,7 +162,7 @@ class StageJobPayload(object):
 
 class RunJobPayload(object):
     """
-    Payload that to be sent with JobCommands.RUN_JOB to lando_worker.
+    Payload to be sent with JobCommands.RUN_JOB to lando_worker.
     """
     def __init__(self, job_details, workflow, vm_instance_name):
         """
@@ -183,7 +184,7 @@ class RunJobPayload(object):
 
 class StoreJobOutputPayload(object):
     """
-    Payload that to be sent with JobCommands.STORE_JOB_OUTPUT to lando_worker.
+    Payload to be sent with JobCommands.STORE_JOB_OUTPUT to lando_worker.
     """
     def __init__(self, credentials, job_details, output_directory, vm_instance_name):
         """
