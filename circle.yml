@@ -3,4 +3,4 @@ machine:
     - docker
 dependencies:
   pre:
-    - pip install docker-py
+    - pip install -r devRequirements.txt
