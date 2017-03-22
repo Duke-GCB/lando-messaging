@@ -6,6 +6,7 @@ from __future__ import absolute_import
 from lando_messaging.messaging import JobCommands
 from lando_messaging.messaging import StartJobPayload, RestartJobPayload, CancelJobPayload
 from lando_messaging.messaging import JobStepCompletePayload, JobStepErrorPayload
+from lando_messaging.messaging import JobStepStoreOutputCompletePayload
 from lando_messaging.messaging import StageJobPayload, RunJobPayload, StoreJobOutputPayload
 from lando_messaging.messaging import WorkerStartedPayload
 from lando_messaging.workqueue import WorkQueueClient
@@ -66,9 +67,24 @@ class LandoClient(object):
     def job_step_complete(self, job_request_payload):
         """
         Send message that the job step is complete using payload data.
-        :param job_request_payload: StageJobPayload|RunJobPayload|StoreJobOutputPayload payload from complete job
+        Raises ValueError if used for StoreJobOutputPayload message type.
+        :param job_request_payload: StageJobPayload|RunJobPayload payload from complete job
         """
+        if job_request_payload.success_command == JobCommands.STORE_JOB_OUTPUT_COMPLETE:
+            raise ValueError("Programmer error use use job_step_store_output_complete instead.")
         payload = JobStepCompletePayload(job_request_payload)
+        self.send(job_request_payload.success_command, payload)
+
+    def job_step_store_output_complete(self, job_request_payload, output_project_info):
+        """
+        Send message that the store output job step is complete using payload data.
+        Raises ValueError if used for non-StoreJobOutputPayload message type.
+        :param job_request_payload: StoreJobOutputPayload payload from complete job
+        :param output_project_info: object: info about the project created
+        """
+        if job_request_payload.success_command != JobCommands.STORE_JOB_OUTPUT_COMPLETE:
+            raise ValueError("Programmer error only use job_step_store_output_complete for store_output_complete.")
+        payload = JobStepStoreOutputCompletePayload(job_request_payload, output_project_info)
         self.send(job_request_payload.success_command, payload)
 
     def job_step_error(self, job_request_payload, message):
@@ -113,15 +129,14 @@ class LandoWorkerClient(object):
         """
         self._send(JobCommands.RUN_JOB, RunJobPayload(job_details, workflow, vm_instance_name))
 
-    def store_job_output(self, credentials, job_details, output_directory, vm_instance_name):
+    def store_job_output(self, credentials, job_details, vm_instance_name):
         """
         Store the output of a finished job.
         :param credentials: jobapi.Credentials: user's credentials used to upload resulting files
         :param job_details: object: details about job(id, name, created date, workflow version)
-        :param output_directory: jobapi.OutputDirectory: info about where we will upload the results
         :param vm_instance_name: name of the instance lando_worker is running on (this passed back in the response)
         """
-        payload = StoreJobOutputPayload(credentials, job_details, output_directory, vm_instance_name)
+        payload = StoreJobOutputPayload(credentials, job_details, vm_instance_name)
         self._send(JobCommands.STORE_JOB_OUTPUT, payload)
 
     def _send(self, command, payload):

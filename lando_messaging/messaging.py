@@ -175,7 +175,6 @@ class RunJobPayload(object):
         self.cwl_file_url = workflow.url
         self.workflow_object_name = workflow.object_name
         self.input_json = workflow.job_order
-        self.output_directory = workflow.output_directory
         self.vm_instance_name = vm_instance_name
         self.success_command = JobCommands.RUN_JOB_COMPLETE
         self.error_command = JobCommands.RUN_JOB_ERROR
@@ -186,19 +185,15 @@ class StoreJobOutputPayload(object):
     """
     Payload to be sent with JobCommands.STORE_JOB_OUTPUT to lando_worker.
     """
-    def __init__(self, credentials, job_details, output_directory, vm_instance_name):
+    def __init__(self, credentials, job_details, vm_instance_name):
         """
         :param credentials: jobapi.Credentials: user's credentials used to upload resulting files
         :param job_details: object: details about job(id, name, created date, workflow version)
-        :param output_directory: jobapi.OutputDirectory: info about where we will upload the results
         :param vm_instance_name: name of the instance lando_worker is running on (this passed back in the response)
         """
         self.credentials = credentials
         self.job_id = job_details.id
         self.job_details = job_details
-        self.dir_name = output_directory.dir_name
-        self.project_id = output_directory.project_id
-        self.dds_user_credentials = output_directory.dds_user_credentials
         self.vm_instance_name = vm_instance_name
         self.success_command = JobCommands.STORE_JOB_OUTPUT_COMPLETE
         self.error_command = JobCommands.STORE_JOB_OUTPUT_ERROR
@@ -212,6 +207,20 @@ class JobStepCompletePayload(object):
     def __init__(self, payload):
         self.job_id = payload.job_id
         self.vm_instance_name = payload.vm_instance_name
+
+
+class JobStepStoreOutputCompletePayload(object):
+    """
+    Payload that will be sent to the store_job_output_complete method
+    """
+    def __init__(self, payload, output_project_info):
+        """
+        :param payload: StoreJobOutputPayload: payload sent with JobCommands.STORE_JOB_OUTPUT
+        :param output_project_info: object: info about the project created
+        """
+        self.job_id = payload.job_id
+        self.vm_instance_name = payload.vm_instance_name
+        self.output_project_info = output_project_info
 
 
 class JobStepErrorPayload(object):
