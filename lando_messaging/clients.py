@@ -12,7 +12,6 @@ from lando_messaging.messaging import WorkerStartedPayload
 from lando_messaging.workqueue import WorkQueueClient
 
 
-
 class LandoClient(object):
     """
     Allows clients of lando to queue messages for lando.
@@ -68,7 +67,7 @@ class LandoClient(object):
     def job_step_complete(self, job_request_payload):
         """
         Send message that the job step is complete using payload data.
-        Raises if used for StoreJobOutputPayload message type.
+        Raises ValueError if used for StoreJobOutputPayload message type.
         :param job_request_payload: StageJobPayload|RunJobPayload payload from complete job
         """
         if job_request_payload.success_command == JobCommands.STORE_JOB_OUTPUT_COMPLETE:
@@ -79,7 +78,7 @@ class LandoClient(object):
     def job_step_store_output_complete(self, job_request_payload, output_project_info):
         """
         Send message that the store output job step is complete using payload data.
-        Raises if used for non-StoreJobOutputPayload message type.
+        Raises ValueError if used for non-StoreJobOutputPayload message type.
         :param job_request_payload: StoreJobOutputPayload payload from complete job
         :param output_project_info: object: info about the project created
         """
