@@ -1,7 +1,0 @@
-deploy:
-  provider: pypi
-  user: jbradley
-  password:
-    secure: gqokTMiv6l3XThqNi2GZrxDjVuqcNVcQcyo87tjemq91yYprrSSOY8q+4Fhqj40lsvW17rQym+8+H1Vlgcsw23bvvOqGAalhX08AN/Aat/Tu38pzlqMYm7t5Wr3zHEIIXWU/xJdXE1TYlVM3X842LsCEhEVkj0UkNC/PR9xw76K1QuDbeF0Ihv+rjwSzP4Uch6R1nNkl3Erzu8x/sbyAza4uRWRDa5ULID1+yY3+RhfjDHaaG9++EisPfiyRh+i052zv4Hgaa2BzFxcHdUmPoOgT+tXonyYL15va1oM/JeztdPmHerRZ2yNUpO5VPTFS1q9VTwkVXx00FanDX9p4BDJAmqnPFO941HTqdTQ99DGCi7Zi/CjoL9z1BkBtvKBSQLN6ZEYSajvZwmW0KtwVmPrQEdBI9flaGadYzzuUV9f6EH/h1i9MdbTmXm2A81OIaLotPgyETk3dlTzSFx5lb2OfPEwxdg/BVdH7WB+n8OPXdUfICskT9/s59MiUccqgCHrKU9vVAhv/Vt5GlvczzrMKZL0+Orxpd0lP5Du6HFF4VunyxoKBnbqj1O+017YFVtZ8C3jri5P+8OwioeY4XwmCXVi0dpsijUBjHlDlIaiVFX4kTJLTJK9VisGvX1gVjrHb22/NZWsdeEviqsLAWqiSYeZHKHgtD69cmwm3JjY=
-  on:
-    tags: true

@@ -4,3 +4,11 @@ machine:
 dependencies:
   pre:
     - pip install -r devRequirements.txt
+
+deployment:
+  production: # just a label; label names are completely up to you
+    branch: master
+    commands:
+     - python setup.py bdist_wheel --universal
+     - pip install twine
+     - twine upload --username "${PYPI_USERNAME}" --password "${PYPI_PASSWORD}" dist/*
