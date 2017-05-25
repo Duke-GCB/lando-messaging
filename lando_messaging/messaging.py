@@ -185,16 +185,18 @@ class StoreJobOutputPayload(object):
     """
     Payload to be sent with JobCommands.STORE_JOB_OUTPUT to lando_worker.
     """
-    def __init__(self, credentials, job_details, vm_instance_name):
+    def __init__(self, credentials, job_details, vm_instance_name, share_with_user):
         """
         :param credentials: jobapi.Credentials: user's credentials used to upload resulting files
         :param job_details: object: details about job(id, name, created date, workflow version)
         :param vm_instance_name: name of the instance lando_worker is running on (this passed back in the response)
+        :param share_with_user: str: id representing the user to share the project with
         """
         self.credentials = credentials
         self.job_id = job_details.id
         self.job_details = job_details
         self.vm_instance_name = vm_instance_name
+        self.share_with_user = share_with_user
         self.success_command = JobCommands.STORE_JOB_OUTPUT_COMPLETE
         self.error_command = JobCommands.STORE_JOB_OUTPUT_ERROR
         self.job_description = "Storing output files"

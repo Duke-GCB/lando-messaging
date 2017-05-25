@@ -129,14 +129,15 @@ class LandoWorkerClient(object):
         """
         self._send(JobCommands.RUN_JOB, RunJobPayload(job_details, workflow, vm_instance_name))
 
-    def store_job_output(self, credentials, job_details, vm_instance_name):
+    def store_job_output(self, credentials, job_details, vm_instance_name, share_with_user):
         """
         Store the output of a finished job.
         :param credentials: jobapi.Credentials: user's credentials used to upload resulting files
         :param job_details: object: details about job(id, name, created date, workflow version)
         :param vm_instance_name: name of the instance lando_worker is running on (this passed back in the response)
+        :param share_with_user: str: id representing the user to share the project with
         """
-        payload = StoreJobOutputPayload(credentials, job_details, vm_instance_name)
+        payload = StoreJobOutputPayload(credentials, job_details, vm_instance_name, share_with_user)
         self._send(JobCommands.STORE_JOB_OUTPUT, payload)
 
     def _send(self, command, payload):

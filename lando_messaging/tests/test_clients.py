@@ -46,11 +46,12 @@ class TestLandoWorkerClient(TestCase):
         lando_worker_client = LandoWorkerClient(MagicMock(), queue_name='lando')
         job_details = FakeJobDetails(125, "FlyRNASeq3")
         lando_worker_client.store_job_output(credentials='', job_details=job_details,
-                                             vm_instance_name='vm2')
+                                             vm_instance_name='vm2', share_with_user='joe@nope')
         args, kwargs = mock_work_queue_client().send.call_args
         command = args[0]
         job_run_payload = args[1]
         self.assertEqual(JobCommands.STORE_JOB_OUTPUT, command)
         self.assertEqual(125, job_run_payload.job_id)
         self.assertEqual("FlyRNASeq3", job_run_payload.job_details.name)
+        self.assertEqual('joe@nope', job_run_payload.share_with_user)
 

@@ -122,7 +122,8 @@ class TestMessagingAndClients(TestCase):
         # Send message to fake_lando that a job failed while running
         lando_client.job_step_error(run_job_payload, "Oops2")
 
-        store_job_output_payload = StoreJobOutputPayload(None, FakeJobDetails(5), vm_instance_name='test')
+        store_job_output_payload = StoreJobOutputPayload(None, FakeJobDetails(5), vm_instance_name='test',
+                                                         share_with_user='joe@no.nope')
         # Send message to fake_lando that we finished storing output
         lando_client.job_step_store_output_complete(store_job_output_payload, output_project_info='project_id')
         # Send message to fake_lando that we had an error while storing output
@@ -147,7 +148,8 @@ class TestMessagingAndClients(TestCase):
         # job_step_complete should not be used with StoreJobOutputPayload
         queue_name = "lando"
         lando_client = LandoClient(self.config, queue_name)
-        store_job_output_payload = StoreJobOutputPayload(None, FakeJobDetails(5), vm_instance_name='test')
+        store_job_output_payload = StoreJobOutputPayload(None, FakeJobDetails(5), vm_instance_name='test',
+                                                         share_with_user='joe@no.nope')
         with self.assertRaises(ValueError):
             lando_client.job_step_complete(store_job_output_payload)
 
@@ -170,7 +172,8 @@ class TestMessagingAndClients(TestCase):
         lando_worker_client.stage_job(credentials=None, job_details=FakeJobDetails(1), input_files=[],
                                       vm_instance_name='test1')
         lando_worker_client.run_job(job_details=FakeJobDetails(2), workflow=FakeWorkflow(), vm_instance_name='test2')
-        lando_worker_client.store_job_output(credentials=None, job_details=FakeJobDetails(3), vm_instance_name='test3')
+        lando_worker_client.store_job_output(credentials=None, job_details=FakeJobDetails(3), vm_instance_name='test3',
+                                             share_with_user='joe@no.nope')
 
         router.run()
         self.assertEqual(fake_lando_worker.stage_job_payload.job_id, 1)
@@ -179,4 +182,5 @@ class TestMessagingAndClients(TestCase):
         self.assertEqual(fake_lando_worker.run_job_payload.vm_instance_name, 'test2')
         self.assertEqual(fake_lando_worker.store_job_output_payload.job_id, 3)
         self.assertEqual(fake_lando_worker.store_job_output_payload.vm_instance_name, 'test3')
+        self.assertEqual(fake_lando_worker.store_job_output_payload.share_with_user, 'joe@no.nope')
 
