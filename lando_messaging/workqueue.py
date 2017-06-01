@@ -3,6 +3,7 @@ Code for processing/sending messages from/to a queue(AMQP)
 """
 from __future__ import absolute_import
 import logging
+import pkg_resources
 import pika
 import pickle
 from pika.connection import LOGGER as pika_logger
@@ -14,6 +15,13 @@ class LoggerFilterNormalCloseIsFine (logging.Filter):
     def filter (self, record):
         return not record.getMessage().endswith('(200): Normal shutdown')
 pika_logger.addFilter(LoggerFilterNormalCloseIsFine())
+
+
+def get_version_str():
+    """
+    Returns version number of lando_messaging
+    """
+    return pkg_resources.get_distribution("lando_messaging").version
 
 
 class WorkQueueConnection(object):
@@ -131,6 +139,7 @@ class WorkRequest(object):
         """
         self.command = command
         self.payload = payload
+        self.version = get_version_str()
 
 
 class WorkQueueClient(object):
@@ -160,19 +169,31 @@ class WorkQueueClient(object):
         self.connection.delete_queue(self.queue_name)
 
 
+def raise_on_version_mismatch(work_request, local_version):
+    """
+    Raises error because we cannot upgrade the message.
+    :param work_request: WorkRequest: request that had a different version
+    :param local_version: str: our version string that does not match message.version
+    """
+    raise ValueError("Received version mismatch.")
+
+
 class WorkQueueProcessor(object):
     """
     Processes incoming WorkRequest messages from the queue.
     Call add_command to specify operations to run for each WorkRequest.command.
     """
-    def __init__(self, config, queue_name):
+    def __init__(self, config, queue_name, on_version_mismatch=raise_on_version_mismatch):
         """
         Creates connection with host, username, and password from config.
         :param config: config.Config: contains work queue configuration
+        :param on_version_mismatch: func(WorkRequest, str): called when we receive a message with a different version
         """
         self.connection = WorkQueueConnection(config)
         self.queue_name = queue_name
+        self.on_version_mismatch = on_version_mismatch
         self.command_name_to_func = {}
+        self.version = get_version_str()
 
     def add_command_by_method_name(self, command, obj):
         """
@@ -221,16 +242,18 @@ class WorkQueueProcessor(object):
         :param ch: channel message was sent on
         :param method: pika.Basic.Deliver
         :param properties: pika.BasicProperties
-        :param body: str: payload of the message
+        :param body: str: payload of the message (picked WorkRequest)
         """
-        message = pickle.loads(body)
+        work_request = pickle.loads(body)
         ch.basic_ack(delivery_tag=method.delivery_tag)
-        func = self.command_name_to_func.get(message.command)
+        if work_request.version != self.version:
+            self.on_version_mismatch(work_request, self.version)
+        func = self.command_name_to_func.get(work_request.command)
         if func:
-            logging.info("Running command {}.".format(message.command))
-            func(message.payload)
+            logging.info("Running command {}.".format(work_request.command))
+            func(work_request.payload)
         else:
-            logging.error("Unknown command: {}".format(message.command))
+            logging.error("Unknown command: {}".format(work_request.command))
 
 
 class WorkProgressQueue(object):
