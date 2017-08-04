@@ -184,8 +184,8 @@ class TestMessagingAndClients(TestCase):
         self.assertEqual(fake_lando_worker.stage_job_payload.vm_volume_name, 'vol1')
         self.assertEqual(fake_lando_worker.run_job_payload.job_id, 2)
         self.assertEqual(fake_lando_worker.run_job_payload.vm_instance_name, 'test2')
-        self.assertEqual(fake_lando_worker.stage_job_payload.vm_volume_name, 'vol2')
+        self.assertEqual(fake_lando_worker.run_job_payload.vm_volume_name, 'vol2')
         self.assertEqual(fake_lando_worker.store_job_output_payload.job_id, 3)
         self.assertEqual(fake_lando_worker.store_job_output_payload.vm_instance_name, 'test3')
-        self.assertEqual(fake_lando_worker.stage_job_payload.vm_volume_name, 'vol3')
+        self.assertEqual(fake_lando_worker.store_job_output_payload.vm_volume_name, 'vol3')
 
