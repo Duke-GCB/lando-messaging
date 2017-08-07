@@ -143,20 +143,18 @@ class StageJobPayload(object):
     """
     Payload to be sent with JobCommands.STAGE_JOB to lando_worker.
     """
-    def __init__(self, credentials, job_details, input_files, vm_instance_name, vm_volume_name):
+    def __init__(self, credentials, job_details, input_files, vm_instance_name):
         """
         :param credentials: jobapi.Credentials: keys used to download files
         :param job_details: object: details about job(id, name, created date, workflow version)
         :param input_files: [InputFile]: list of files to download
         :param vm_instance_name: str: name of the instance lando_worker is running on (this passed back in the response)
-        :param vm_volume_name: str: name of the volume lando_worker is using (this passed back in the response)
         """
         self.credentials = credentials
         self.job_id = job_details.id
         self.job_details = job_details
         self.input_files = input_files
         self.vm_instance_name = vm_instance_name
-        self.vm_volume_name = vm_volume_name
         self.success_command = JobCommands.STAGE_JOB_COMPLETE
         self.error_command = JobCommands.STAGE_JOB_ERROR
         self.job_description = "Staging files"
@@ -166,12 +164,11 @@ class RunJobPayload(object):
     """
     Payload to be sent with JobCommands.RUN_JOB to lando_worker.
     """
-    def __init__(self, job_details, workflow, vm_instance_name, vm_volume_name):
+    def __init__(self, job_details, workflow, vm_instance_name):
         """
         :param job_details: object: details about job(id, name, created date, workflow version)
         :param workflow: jobapi.Workflow: url to workflow and parameters to use
         :param vm_instance_name: name of the instance lando_worker is running on (this passed back in the response)
-        :param vm_volume_name: str: name of the volume lando_worker is using (this passed back in the response)
         """
         self.job_id = job_details.id
         self.job_details = job_details
@@ -179,7 +176,6 @@ class RunJobPayload(object):
         self.workflow_object_name = workflow.object_name
         self.job_order = workflow.job_order
         self.vm_instance_name = vm_instance_name
-        self.vm_volume_name = vm_volume_name
         self.success_command = JobCommands.RUN_JOB_COMPLETE
         self.error_command = JobCommands.RUN_JOB_ERROR
         self.job_description = "Running workflow"
@@ -189,18 +185,16 @@ class StoreJobOutputPayload(object):
     """
     Payload to be sent with JobCommands.STORE_JOB_OUTPUT to lando_worker.
     """
-    def __init__(self, credentials, job_details, vm_instance_name, vm_volume_name):
+    def __init__(self, credentials, job_details, vm_instance_name):
         """
         :param credentials: jobapi.Credentials: user's credentials used to upload resulting files
         :param job_details: object: details about job(id, name, created date, workflow version)
         :param vm_instance_name: name of the instance lando_worker is running on (this passed back in the response)
-        :param vm_volume_name: str: name of the volume lando_worker is using (this passed back in the response)
         """
         self.credentials = credentials
         self.job_id = job_details.id
         self.job_details = job_details
         self.vm_instance_name = vm_instance_name
-        self.vm_volume_name = vm_volume_name
         self.success_command = JobCommands.STORE_JOB_OUTPUT_COMPLETE
         self.error_command = JobCommands.STORE_JOB_OUTPUT_ERROR
         self.job_description = "Storing output files"
@@ -213,7 +207,6 @@ class JobStepCompletePayload(object):
     def __init__(self, payload):
         self.job_id = payload.job_id
         self.vm_instance_name = payload.vm_instance_name
-        self.vm_volume_name = payload.vm_volume_name
 
 
 class JobStepStoreOutputCompletePayload(object):
@@ -227,7 +220,6 @@ class JobStepStoreOutputCompletePayload(object):
         """
         self.job_id = payload.job_id
         self.vm_instance_name = payload.vm_instance_name
-        self.vm_volume_name = payload.vm_volume_name
         self.output_project_info = output_project_info
 
 
@@ -238,5 +230,4 @@ class JobStepErrorPayload(object):
     def __init__(self, payload, message):
         self.job_id = payload.job_id
         self.vm_instance_name = payload.vm_instance_name
-        self.vm_volume_name = payload.vm_volume_name
         self.message = message

@@ -20,7 +20,7 @@ class TestLandoWorkerClient(TestCase):
         job_details = FakeJobDetails(124, "FlyRNASeq2")
         input_files = MagicMock()
         lando_worker_client.stage_job(credentials='', job_details=job_details,
-                                             input_files=input_files, vm_instance_name='vm2', vm_volume_name='vol2')
+                                             input_files=input_files, vm_instance_name='vm2')
         args, kwargs = mock_work_queue_client().send.call_args
         command = args[0]
         job_run_payload = args[1]
@@ -33,7 +33,7 @@ class TestLandoWorkerClient(TestCase):
         lando_worker_client = LandoWorkerClient(MagicMock(), queue_name='lando')
         job_details = FakeJobDetails(123, "FlyRNASeq")
         workflow = MagicMock(url='', object_name='', job_order='')
-        lando_worker_client.run_job(job_details, workflow, vm_instance_name='vm1', vm_volume_name='vol1')
+        lando_worker_client.run_job(job_details, workflow, vm_instance_name='vm1')
         args, kwargs = mock_work_queue_client().send.call_args
         command = args[0]
         job_run_payload = args[1]
@@ -46,7 +46,7 @@ class TestLandoWorkerClient(TestCase):
         lando_worker_client = LandoWorkerClient(MagicMock(), queue_name='lando')
         job_details = FakeJobDetails(125, "FlyRNASeq3")
         lando_worker_client.store_job_output(credentials='', job_details=job_details,
-                                             vm_instance_name='vm2', vm_volume_name='vol2')
+                                             vm_instance_name='vm2')
         args, kwargs = mock_work_queue_client().send.call_args
         command = args[0]
         job_run_payload = args[1]

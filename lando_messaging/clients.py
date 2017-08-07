@@ -110,37 +110,33 @@ class LandoWorkerClient(object):
         """
         self.work_queue_client = WorkQueueClient(config, queue_name)
 
-    def stage_job(self, credentials, job_details, input_files, vm_instance_name, vm_volume_name):
+    def stage_job(self, credentials, job_details, input_files, vm_instance_name):
         """
         Request that a job be staged on a worker(ie. download some files)
         :param credentials: jobapi.Credentials: user's credentials used to download input_files
         :param job_details: object: details about job(id, name, created date, workflow version)
         :param input_files: [InputFile]: list of files to download
         :param vm_instance_name: str: name of the instance lando_worker is running on (this passed back in the response)
-        :param vm_volume_name: str: name of the volume lando_worker is using (this passed back in the response)
         """
-        self._send(JobCommands.STAGE_JOB, StageJobPayload(credentials, job_details, input_files, vm_instance_name,
-                                                          vm_volume_name))
+        self._send(JobCommands.STAGE_JOB, StageJobPayload(credentials, job_details, input_files, vm_instance_name))
 
-    def run_job(self, job_details, workflow, vm_instance_name, vm_volume_name):
+    def run_job(self, job_details, workflow, vm_instance_name):
         """
         Execute a workflow on a worker.
         :param job_details: object: details about job(id, name, created date, workflow version)
         :param workflow: jobapi.Workflow: url to workflow and parameters to use
         :param vm_instance_name: name of the instance lando_worker is running on (this passed back in the response)
-        :param vm_volume_name: str: name of the volume lando_worker is using (this passed back in the response)
         """
-        self._send(JobCommands.RUN_JOB, RunJobPayload(job_details, workflow, vm_instance_name, vm_volume_name))
+        self._send(JobCommands.RUN_JOB, RunJobPayload(job_details, workflow, vm_instance_name))
 
-    def store_job_output(self, credentials, job_details, vm_instance_name, vm_volume_name):
+    def store_job_output(self, credentials, job_details, vm_instance_name):
         """
         Store the output of a finished job.
         :param credentials: jobapi.Credentials: user's credentials used to upload resulting files
         :param job_details: object: details about job(id, name, created date, workflow version)
         :param vm_instance_name: name of the instance lando_worker is running on (this passed back in the response)
-        :param vm_volume_name: str: name of the volume lando_worker is using (this passed back in the response)
         """
-        payload = StoreJobOutputPayload(credentials, job_details, vm_instance_name, vm_volume_name)
+        payload = StoreJobOutputPayload(credentials, job_details, vm_instance_name)
         self._send(JobCommands.STORE_JOB_OUTPUT, payload)
 
     def _send(self, command, payload):
