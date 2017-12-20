@@ -62,7 +62,7 @@ class DockerRabbitmq(object):
     Rabbitmq container with a default user.
     """
     IMAGE = 'rabbitmq:3.6.14'
-    HOST = "127.0.0.1"
+    HOST = "0.0.0.0"
     USER = "joe"
     PASSWORD = "secret"
 
