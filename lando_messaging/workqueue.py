@@ -105,7 +105,7 @@ class WorkQueueConnection(object):
         self.connect()
         channel = self.connection.channel()
         # Fanout will send message to multiple subscribers
-        channel.exchange_declare(exchange=exchange_name, type='fanout')
+        channel.exchange_declare(exchange=exchange_name, exchange_type='fanout')
         result = channel.basic_publish(exchange=exchange_name, routing_key='', body=body,
                                        properties=pika.BasicProperties(
                                            delivery_mode=2,  # make message persistent
