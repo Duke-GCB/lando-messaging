@@ -124,6 +124,9 @@ class AsyncQueueConsumer(object):
         LOGGER.info('Channel opened')
         self._channel = channel
         self.add_on_channel_close_callback()
+        self.after_channel_open()
+
+    def after_channel_open(self):
         self.setup_queue()
 
     def add_on_channel_close_callback(self):
@@ -266,20 +269,86 @@ class AsyncQueueConsumer(object):
         """Cleanly shutdown the connection to RabbitMQ by stopping the consumer
         with RabbitMQ. When RabbitMQ confirms the cancellation, on_cancelok
         will be invoked by pika, which will then closing the channel and
-        connection. The IOLoop is started again because this method is invoked
-        when CTRL-C is pressed raising a KeyboardInterrupt exception. This
-        exception stops the IOLoop which needs to be running for pika to
-        communicate with RabbitMQ. All of the commands issued prior to starting
-        the IOLoop will be buffered but not processed.
-
+        connection.
         """
         LOGGER.info('Stopping')
         self._closing = True
         self.stop_consuming()
-        self._connection.ioloop.start()
         LOGGER.info('Stopped')
 
     def close_connection(self):
         """This method closes the connection to RabbitMQ."""
         LOGGER.info('Closing connection')
         self._connection.close()
+
+
+class AsyncExchangeConsumer(AsyncQueueConsumer):
+    """
+    Consumer that will consume on an queue attached to an exchange
+    """
+    def __init__(self, host, username, password, exchange_name, exchange_type, routing_key,
+                 queue_name, message_consumer_func):
+        super(AsyncExchangeConsumer, self).__init__(host, username, password, queue_name, message_consumer_func)
+        self.exchange_name = exchange_name
+        self.exchange_type = exchange_type
+        self.routing_key = routing_key
+
+    def after_channel_open(self):
+        self.setup_exchange()
+
+    def setup_exchange(self):
+        """Setup the exchange on RabbitMQ by invoking the Exchange.Declare RPC
+        command. When it is complete, the on_exchange_declareok method will
+        be invoked by pika.
+        """
+        LOGGER.info('Declaring exchange %s', self.exchange_name)
+        self._channel.exchange_declare(self.on_exchange_declareok,
+                                       self.exchange_name,
+                                       self.exchange_type)
+
+    def on_exchange_declareok(self, unused_frame):
+        """Invoked by pika when RabbitMQ has finished the Exchange.Declare RPC
+        command.
+
+        :param pika.Frame.Method unused_frame: Exchange.DeclareOk response frame
+
+        """
+        LOGGER.info('Exchange declared')
+        self.setup_queue()
+
+    def setup_queue(self):
+        """Setup the queue on RabbitMQ by invoking the Queue.Declare RPC
+        command. When it is complete, the on_queue_declareok method will
+        be invoked by pika.
+
+        :param str|unicode queue_name: The name of the queue to declare.
+
+        """
+        LOGGER.info('Declaring queue %s', self.queue_name)
+        self._channel.queue_declare(self.on_queue_declareok, self.queue_name)
+
+    def on_queue_declareok(self, method_frame):
+        """Method invoked by pika when the Queue.Declare RPC call made in
+        setup_queue has completed. In this method we will bind the queue
+        and exchange together with the routing key by issuing the Queue.Bind
+        RPC command. When this command is complete, the on_bindok method will
+        be invoked by pika.
+
+        :param pika.frame.Method method_frame: The Queue.DeclareOk frame
+
+        """
+        LOGGER.info('Binding %s to %s with %s',
+                    self.EXCHANGE, self.QUEUE, self.ROUTING_KEY)
+        self._channel.queue_bind(self.on_bindok, self.QUEUE,
+                                 self.EXCHANGE, self.ROUTING_KEY)
+
+    def on_bindok(self, unused_frame):
+        """Invoked by pika when the Queue.Bind method has completed. At this
+        point we will start consuming messages by calling start_consuming
+        which will invoke the needed RPC commands to start the process.
+
+        :param pika.frame.Method unused_frame: The Queue.BindOk response frame
+
+        """
+        LOGGER.info('Queue bound')
+        self.start_consuming()
