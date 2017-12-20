@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from unittest import TestCase
+from unittest import TestCase, skip
 from lando_messaging.dockerutil import DockerRabbitmq
 from lando_messaging.messaging import MessageRouter, LANDO_INCOMING_MESSAGES, LANDO_WORKER_INCOMING_MESSAGES
 from lando_messaging.messaging import StageJobPayload, RunJobPayload, StoreJobOutputPayload
@@ -86,6 +86,7 @@ class FakeWorkflow(object):
         self.object_name = ''
 
 
+@skip('skipping until we can rework into circleci compatible tests')
 class TestMessagingAndClients(TestCase):
     @classmethod
     def setUpClass(cls):
