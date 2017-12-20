@@ -289,9 +289,9 @@ class AsyncExchangeConsumer(AsyncQueueConsumer):
     def __init__(self, host, username, password, exchange_name, exchange_type, routing_key,
                  queue_name, message_consumer_func):
         super(AsyncExchangeConsumer, self).__init__(host, username, password, queue_name, message_consumer_func)
-        self.exchange_name = exchange_name
-        self.exchange_type = exchange_type
-        self.routing_key = routing_key
+        self._exchange_name = exchange_name
+        self._exchange_type = exchange_type
+        self._routing_key = routing_key
 
     def after_channel_open(self):
         self.setup_exchange()
@@ -301,10 +301,10 @@ class AsyncExchangeConsumer(AsyncQueueConsumer):
         command. When it is complete, the on_exchange_declareok method will
         be invoked by pika.
         """
-        LOGGER.info('Declaring exchange %s', self.exchange_name)
+        LOGGER.info('Declaring exchange %s', self._exchange_name)
         self._channel.exchange_declare(self.on_exchange_declareok,
-                                       self.exchange_name,
-                                       self.exchange_type)
+                                       self._exchange_name,
+                                       self._exchange_type)
 
     def on_exchange_declareok(self, unused_frame):
         """Invoked by pika when RabbitMQ has finished the Exchange.Declare RPC
@@ -324,8 +324,8 @@ class AsyncExchangeConsumer(AsyncQueueConsumer):
         :param str|unicode queue_name: The name of the queue to declare.
 
         """
-        LOGGER.info('Declaring queue %s', self.queue_name)
-        self._channel.queue_declare(self.on_queue_declareok, self.queue_name)
+        LOGGER.info('Declaring queue %s', self._queue_name)
+        self._channel.queue_declare(self.on_queue_declareok, self._queue_name)
 
     def on_queue_declareok(self, method_frame):
         """Method invoked by pika when the Queue.Declare RPC call made in
@@ -338,9 +338,9 @@ class AsyncExchangeConsumer(AsyncQueueConsumer):
 
         """
         LOGGER.info('Binding %s to %s with %s',
-                    self.EXCHANGE, self.QUEUE, self.ROUTING_KEY)
-        self._channel.queue_bind(self.on_bindok, self.QUEUE,
-                                 self.EXCHANGE, self.ROUTING_KEY)
+                    self._exchange_name, self._queue_name, self._routing_key)
+        self._channel.queue_bind(self.on_bindok, queue=self._queue_name,
+                                 exchange=self._exchange_name, routing_key=self._routing_key)
 
     def on_bindok(self, unused_frame):
         """Invoked by pika when the Queue.Bind method has completed. At this
@@ -351,4 +351,4 @@ class AsyncExchangeConsumer(AsyncQueueConsumer):
 
         """
         LOGGER.info('Queue bound')
-        self.start_consuming()
+        self.start_consuming(None)
