@@ -52,22 +52,31 @@ class FakeLando(object):
 
     def store_job_output_error(self, payload):
         self.store_job_output_error_payload = payload
-        self.router.processor.shutdown()
+        self.router.stop()
 
 
 class FakeLandoWorker(object):
-    def __init__(self):
+    def __init__(self, expect_messages):
         self.router = None
+        self.expect_messages = expect_messages
+
+    def after_message_processed(self):
+        self.expect_messages -= 1
+        if not self.expect_messages:
+            self.router.stop()
 
     def stage_job(self, payload):
         self.stage_job_payload = payload
+        self.after_message_processed()
 
     def run_job(self, payload):
         self.run_job_payload = payload
+        self.after_message_processed()
 
     def store_job_output(self, payload):
         self.store_job_output_payload = payload
         self.router.processor.shutdown()
+        self.after_message_processed()
 
 
 class FakeWorkflow(object):
@@ -162,7 +171,7 @@ class TestMessagingAndClients(TestCase):
         """
         queue_name = "lando_worker"
         lando_worker_client = LandoWorkerClient(self.config, queue_name)
-        fake_lando_worker = FakeLandoWorker()
+        fake_lando_worker = FakeLandoWorker(expect_messages=3)
         router = MessageRouter(self.config, fake_lando_worker, queue_name=queue_name,
                                command_names=LANDO_WORKER_INCOMING_MESSAGES)
         fake_lando_worker.router = router

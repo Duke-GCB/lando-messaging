@@ -3,7 +3,8 @@ Defines all commands/payloads and a message receiver which allow lando and lando
 """
 from __future__ import absolute_import
 from lando_messaging.workqueue import WorkQueueProcessor
-
+from lando_messaging.consumer import AsyncQueueConsumer
+import pika
 
 class JobCommands(object):
     """
@@ -71,7 +72,10 @@ class MessageRouter(object):
         Blocking loop that will call commands as messages come in.
         Delete the queue we are listening on or call processor.shutdown() to end loop.
         """
-        self.processor.process_messages_loop()
+        self.processor.run()
+
+    def stop(self):
+        self.processor.shutdown()
 
     @staticmethod
     def make_lando_router(config, obj, queue_name):

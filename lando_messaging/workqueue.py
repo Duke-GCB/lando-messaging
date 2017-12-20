@@ -7,6 +7,7 @@ import pkg_resources
 import pika
 import pickle
 from pika.connection import LOGGER as pika_logger
+from lando_messaging.consumer import AsyncQueueConsumer
 
 
 # Disable bogus "Normal shutdown logging.
@@ -189,11 +190,17 @@ class WorkQueueProcessor(object):
         :param config: config.Config: contains work queue configuration
         :param on_version_mismatch: func(WorkRequest, str): called when we receive a message with a different version
         """
-        self.connection = WorkQueueConnection(config)
-        self.queue_name = queue_name
         self.on_version_mismatch = on_version_mismatch
         self.command_name_to_func = {}
         self.version = get_version_str()
+        work_queue_config = config.work_queue_config
+        self.async_consumer = AsyncQueueConsumer(
+            host=work_queue_config.host,
+            username=work_queue_config.username,
+            password=work_queue_config.password,
+            queue_name=queue_name,
+            message_consumer_func=self.process_message
+        )
 
     def add_command_by_method_name(self, command, obj):
         """
@@ -216,25 +223,16 @@ class WorkQueueProcessor(object):
         """
         self.command_name_to_func[command] = func
 
+    def run(self):
+        self.async_consumer.run()
+
     def shutdown(self, payload=None):
         """
         Close the connection/shutdown the messaging loop.
         :param payload: None: not used. Here to allow using this method with add_command.
         """
         logging.info("Work queue shutdown.")
-        self.connection.close()
-
-    def process_messages_loop(self):
-        """
-        Busy loop that processes incoming WorkRequest messages via functions specified by add_command.
-        :return:
-        """
-        try:
-            logging.info("Starting work queue loop.")
-            self.connection.receive_loop_with_callback(self.queue_name, self.process_message)
-        except pika.exceptions.ConnectionClosed as ex:
-            logging.error("Connection closed {}.".format(ex))
-            raise
+        self.async_consumer.stop()
 
     def process_message(self, ch, method, properties, body):
         """
