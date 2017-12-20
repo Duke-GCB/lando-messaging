@@ -3,7 +3,7 @@ Utility only used to perform integration tests against docker images.
 """
 import os
 import time
-from docker import Client
+import docker
 
 DOCKER_BASE_URL = 'unix://var/run/docker.sock'
 DOCKER_VERSION = '1.21'
@@ -20,7 +20,7 @@ class DockerContainer(object):
         :param environment: dict: environment variables to create in the container
         :param ports: [int]: list of ports to map 1:1 to the host
         """
-        self.cli = Client(base_url=DOCKER_BASE_URL, version=DOCKER_VERSION)
+        self.cli = docker.from_env()
         self.image_name = image_name
         self.container_id = None
         self.environment = environment
@@ -30,31 +30,21 @@ class DockerContainer(object):
         """
         Start running the container.
         """
-        # Pull if not local
-        images = self.cli.images(self.image_name)
-        if len(images) == 0:
-            self.cli.pull(self.image_name)
         # Run
         port_bindings = {}
         for port in self.ports:
             port_bindings[port] = ('0.0.0.0', port)
-        container = self.cli.create_container(self.image_name,
-                                              environment=self.environment,
-                                              ports=self.ports,
-                                              host_config=self.cli.create_host_config(port_bindings=port_bindings))
-        self.container_id = container.get('Id')
-        result = self.cli.start(container=self.container_id)
+        self.container = self.cli.containers.run(self.image_name,
+                                                 environment=self.environment,
+                                                 ports=self.ports,
+                                                 detach=True)
 
     def destroy(self):
         """
         Stop and delete the container.
         """
-        if self.container_id:
-            self.cli.stop(container=self.container_id)
-            # Do not remove containers when testing circle: https://circleci.com/docs/docker-btrfs-error/
-            if os.environ.get('CIRCLECI') != 'true':
-                self.cli.remove_container(container=self.container_id)
-            self.container_id = None
+        if self.container:
+            self.container.kill()
 
 
 class DockerRabbitmq(object):
@@ -72,7 +62,7 @@ class DockerRabbitmq(object):
             "RABBITMQ_DEFAULT_USER": DockerRabbitmq.USER,
             "RABBITMQ_DEFAULT_PASS": DockerRabbitmq.PASSWORD,
         }
-        ports = [5672, 15672]
+        ports = { '5672/tcp': 5672, '15672/tcp': 15672}
         self.container = DockerContainer(image_name=DockerRabbitmq.IMAGE, environment=environment, ports=ports)
         self.container.run()
         time.sleep(6)
