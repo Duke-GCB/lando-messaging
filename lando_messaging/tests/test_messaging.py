@@ -89,11 +89,13 @@ class FakeWorkflow(object):
 @skip('skipping until we can rework into circleci compatible tests')
 class TestMessagingAndClients(TestCase):
     @classmethod
+    @skip('skipping until we can rework into circleci compatible tests')
     def setUpClass(cls):
         cls.rabbit_vm = DockerRabbitmq()
         cls.config = FakeConfig(DockerRabbitmq.HOST, DockerRabbitmq.USER, DockerRabbitmq.PASSWORD)
 
     @classmethod
+    @skip('skipping until we can rework into circleci compatible tests')
     def tearDownClass(cls):
         cls.rabbit_vm.destroy()
 
