@@ -1,18 +1,24 @@
 from __future__ import absolute_import
-from unittest import TestCase
+from unittest import TestCase, skipIf
+import os
 import pickle
 from lando_messaging.dockerutil import DockerRabbitmq
 from lando_messaging.workqueue import WorkQueueConnection, WorkQueueProcessor, WorkQueueClient, WorkProgressQueue, \
     WorkRequest, get_version_str, Config
 from mock import MagicMock, patch
 
+IN_CIRCLECI = os.environ.get('CIRCLECI') == 'true'
 
+
+@skipIf(IN_CIRCLECI, 'skip due to circleci docker port permission issue')
 class TestWorkQueue(TestCase):
+    @skipIf(IN_CIRCLECI)
     @classmethod
     def setUpClass(cls):
         cls.rabbit_vm = DockerRabbitmq()
         cls.config = Config(DockerRabbitmq.HOST, DockerRabbitmq.USER, DockerRabbitmq.PASSWORD)
 
+    @skipIf(IN_CIRCLECI)
     @classmethod
     def tearDownClass(cls):
         cls.rabbit_vm.destroy()
@@ -70,12 +76,15 @@ class TestWorkQueue(TestCase):
         self.two_value = payload
 
 
+@skipIf(IN_CIRCLECI, 'skip due to circleci docker port permission issue')
 class TestWorkProgressQueue(TestCase):
+    @skipIf(IN_CIRCLECI)
     @classmethod
     def setUpClass(cls):
         cls.rabbit_vm = DockerRabbitmq()
         cls.config = Config(DockerRabbitmq.HOST, DockerRabbitmq.USER, DockerRabbitmq.PASSWORD)
 
+    @skipIf(IN_CIRCLECI)
     @classmethod
     def tearDownClass(cls):
         cls.rabbit_vm.destroy()
