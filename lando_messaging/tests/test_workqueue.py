@@ -3,23 +3,15 @@ from unittest import TestCase
 import pickle
 from lando_messaging.dockerutil import DockerRabbitmq
 from lando_messaging.workqueue import WorkQueueConnection, WorkQueueProcessor, WorkQueueClient, WorkProgressQueue, \
-    WorkRequest, get_version_str
+    WorkRequest, get_version_str, Config
 from mock import MagicMock, patch
-
-
-class FakeConfig(object):
-    def __init__(self, host, username, password):
-        self.host = host
-        self.username = username
-        self.password = password
-        self.work_queue_config = self
 
 
 class TestWorkQueue(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.rabbit_vm = DockerRabbitmq()
-        cls.config = FakeConfig(DockerRabbitmq.HOST, DockerRabbitmq.USER, DockerRabbitmq.PASSWORD)
+        cls.config = Config(DockerRabbitmq.HOST, DockerRabbitmq.USER, DockerRabbitmq.PASSWORD)
 
     @classmethod
     def tearDownClass(cls):
@@ -82,7 +74,7 @@ class TestWorkProgressQueue(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.rabbit_vm = DockerRabbitmq()
-        cls.config = FakeConfig(DockerRabbitmq.HOST, DockerRabbitmq.USER, DockerRabbitmq.PASSWORD)
+        cls.config = Config(DockerRabbitmq.HOST, DockerRabbitmq.USER, DockerRabbitmq.PASSWORD)
 
     @classmethod
     def tearDownClass(cls):

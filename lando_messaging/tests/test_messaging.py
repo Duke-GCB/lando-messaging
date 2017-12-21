@@ -4,14 +4,7 @@ from lando_messaging.dockerutil import DockerRabbitmq
 from lando_messaging.messaging import MessageRouter, LANDO_INCOMING_MESSAGES, LANDO_WORKER_INCOMING_MESSAGES
 from lando_messaging.messaging import StageJobPayload, RunJobPayload, StoreJobOutputPayload
 from lando_messaging.clients import LandoClient, LandoWorkerClient
-
-
-class FakeConfig(object):
-    def __init__(self, host, username, password):
-        self.host = host
-        self.username = username
-        self.password = password
-        self.work_queue_config = self
+from lando_messaging.workqueue import Config
 
 
 class FakeJobDetails(object):
@@ -81,7 +74,7 @@ class TestMessagingAndClients(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.rabbit_vm = DockerRabbitmq()
-        cls.config = FakeConfig(DockerRabbitmq.HOST, DockerRabbitmq.USER, DockerRabbitmq.PASSWORD)
+        cls.config = Config(DockerRabbitmq.HOST, DockerRabbitmq.USER, DockerRabbitmq.PASSWORD)
 
     @classmethod
     def tearDownClass(cls):
