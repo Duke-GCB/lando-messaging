@@ -243,7 +243,6 @@ class WorkQueueProcessor(object):
         :param body: str: payload of the message (picked WorkRequest)
         """
         work_request = pickle.loads(body)
-        ch.basic_ack(delivery_tag=method.delivery_tag)
         if work_request.version != self.version:
             self.on_version_mismatch(work_request, self.version)
         func = self.command_name_to_func.get(work_request.command)
