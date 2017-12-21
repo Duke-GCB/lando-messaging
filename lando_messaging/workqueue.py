@@ -37,6 +37,7 @@ class WorkQueueConnection(object):
         self.host = work_queue_config.host
         self.username = work_queue_config.username
         self.password = work_queue_config.password
+        self.heartbeat_interval = None
         self.connection = None
 
     def connect(self):
@@ -45,8 +46,9 @@ class WorkQueueConnection(object):
         """
         logging.info("Connecting to {} with user {}.".format(self.host, self.username))
         credentials = pika.PlainCredentials(self.username, self.password)
-        # Setting heartbeat to 0 so it will be disabled and long running jobs will not timeout.
-        connection_params = pika.ConnectionParameters(host=self.host, credentials=credentials, heartbeat_interval=0)
+        connection_params = pika.ConnectionParameters(host=self.host,
+                                                      credentials=credentials,
+                                                      heartbeat_interval=self.heartbeat_interval)
         self.connection = pika.BlockingConnection(connection_params)
 
     def close(self):
