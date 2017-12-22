@@ -1,6 +1,9 @@
 machine:
   services:
     - docker
+    - rabbitmq-server
+  environment:
+    INTEGRATION_TEST: true
 dependencies:
   pre:
     - pip install -r devRequirements.txt

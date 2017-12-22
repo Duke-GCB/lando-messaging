@@ -1,13 +1,12 @@
 from __future__ import absolute_import
 from unittest import TestCase, skipIf
 import os
-from lando_messaging.dockerutil import DockerRabbitmq
 from lando_messaging.messaging import MessageRouter, LANDO_INCOMING_MESSAGES, LANDO_WORKER_INCOMING_MESSAGES
 from lando_messaging.messaging import StageJobPayload, RunJobPayload, StoreJobOutputPayload
 from lando_messaging.clients import LandoClient, LandoWorkerClient
 from lando_messaging.workqueue import Config
 
-IN_CIRCLECI = os.environ.get('CIRCLECI') == 'true'
+INTEGRATION_TEST = os.environ.get('INTEGRATION_TEST') == 'true'
 
 
 class FakeJobDetails(object):
@@ -73,18 +72,11 @@ class FakeWorkflow(object):
         self.object_name = ''
 
 
-@skipIf(IN_CIRCLECI, 'skip due to circleci docker port permission issue')
+@skipIf(not INTEGRATION_TEST, 'Integration tests require a local rabbitmq instance')
 class TestMessagingAndClients(TestCase):
-    @skipIf(IN_CIRCLECI)
     @classmethod
     def setUpClass(cls):
-        cls.rabbit_vm = DockerRabbitmq()
-        cls.config = Config(DockerRabbitmq.HOST, DockerRabbitmq.USER, DockerRabbitmq.PASSWORD)
-
-    @skipIf(IN_CIRCLECI)
-    @classmethod
-    def tearDownClass(cls):
-        cls.rabbit_vm.destroy()
+        cls.config = Config('localhost', 'guest', 'guest')
 
     def test_lando_client_and_router(self):
         """
