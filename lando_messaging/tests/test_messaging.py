@@ -85,7 +85,7 @@ class TestMessagingAndClients(TestCase):
         queue_name = "lando"
         lando_client = LandoClient(self.config, queue_name)
         fake_lando = FakeLando()
-        router = MessageRouter(self.config, fake_lando, queue_name=queue_name, command_names=LANDO_INCOMING_MESSAGES)
+        router = MessageRouter.make_lando_router(self.config, fake_lando, queue_name)
         fake_lando.router = router
 
         # Messages sent to lando from a user
@@ -154,8 +154,7 @@ class TestMessagingAndClients(TestCase):
         queue_name = "lando_worker"
         lando_worker_client = LandoWorkerClient(self.config, queue_name)
         fake_lando_worker = FakeLandoWorker()
-        router = MessageRouter(self.config, fake_lando_worker, queue_name=queue_name,
-                               command_names=LANDO_WORKER_INCOMING_MESSAGES)
+        router = MessageRouter.make_worker_router(self.config, fake_lando_worker, queue_name)
         fake_lando_worker.router = router
 
         lando_worker_client.stage_job(credentials=None, job_details=FakeJobDetails(1), input_files=[],

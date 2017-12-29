@@ -185,17 +185,23 @@ class WorkQueueProcessor(object):
     Processes incoming WorkRequest messages from the queue.
     Call add_command to specify operations to run for each WorkRequest.command.
     """
-    def __init__(self, config, queue_name, on_version_mismatch=raise_on_version_mismatch):
+    def __init__(self, config, queue_name,
+                 on_version_mismatch=raise_on_version_mismatch,
+                 disconnect_while_processing=False):
         """
         Creates connection with host, username, and password from config.
         :param config: config.Config: contains work queue configuration
         :param on_version_mismatch: func(WorkRequest, str): called when we receive a message with a different version
+        :param disconnect_while_processing: bool: disconnect from queue while processing (for long running methods)
         """
         self.connection = WorkQueueConnection(config)
         self.queue_name = queue_name
         self.on_version_mismatch = on_version_mismatch
         self.command_name_to_func = {}
         self.version = get_version_str()
+        self.work_request = None
+        self.receiving_messages = False
+        self.disconnect_while_processing = disconnect_while_processing
 
     def add_command_by_method_name(self, command, obj):
         """
@@ -225,18 +231,28 @@ class WorkQueueProcessor(object):
         """
         logging.info("Work queue shutdown.")
         self.connection.close()
+        self.receiving_messages = False
 
     def process_messages_loop(self):
         """
-        Busy loop that processes incoming WorkRequest messages via functions specified by add_command.
-        :return:
+        Processes incoming WorkRequest messages one at a time via functions specified by add_command.
         """
+        self.receiving_messages = True
         try:
-            logging.info("Starting work queue loop.")
-            self.connection.receive_loop_with_callback(self.queue_name, self.process_message)
+            if self.disconnect_while_processing:
+                self._process_messages_with_disconnect()
+            else:
+                self._process_messages_loop_stay_connected()
         except pika.exceptions.ConnectionClosed as ex:
             logging.error("Connection closed {}.".format(ex))
             raise
+
+    def _process_messages_loop_stay_connected(self):
+        """
+        Busy loop that processes incoming WorkRequest messages via functions specified by add_command.
+        """
+        logging.info("Starting work queue loop.")
+        self.connection.receive_loop_with_callback(self.queue_name, self.process_message)
 
     def process_message(self, ch, method, properties, body):
         """
@@ -246,16 +262,31 @@ class WorkQueueProcessor(object):
         :param properties: pika.BasicProperties
         :param body: str: payload of the message (picked WorkRequest)
         """
-        work_request = pickle.loads(body)
+        self.work_request = pickle.loads(body)
         ch.basic_ack(delivery_tag=method.delivery_tag)
-        if work_request.version != self.version:
-            self.on_version_mismatch(work_request, self.version)
-        func = self.command_name_to_func.get(work_request.command)
+        self.process_work_request()
+
+    def _process_messages_with_disconnect(self):
+        while self.receiving_messages:
+            self.connection.receive_loop_with_callback(self.queue_name, self.save_work_request_and_close)
+            if self.work_request:
+                self.process_work_request()
+
+    def save_work_request_and_close(self, ch, method, properties, body):
+        self.work_request = pickle.loads(body)
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        ch.stop_consuming()
+        self.connection.close()
+
+    def process_work_request(self):
+        if self.work_request.version != self.version:
+            self.on_version_mismatch(self.work_request, self.version)
+        func = self.command_name_to_func.get(self.work_request.command)
         if func:
-            logging.info("Running command {}.".format(work_request.command))
-            func(work_request.payload)
+            logging.info("Running command {}.".format(self.work_request.command))
+            func(self.work_request.payload)
         else:
-            logging.error("Unknown command: {}".format(work_request.command))
+            logging.error("Unknown command: {}".format(self.work_request.command))
 
 
 class WorkProgressQueue(object):
