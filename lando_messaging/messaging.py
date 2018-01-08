@@ -2,7 +2,7 @@
 Defines all commands/payloads and a message receiver which allow lando and lando_worker to communicate over AMQP.
 """
 from __future__ import absolute_import
-from lando_messaging.workqueue import WorkQueueProcessor
+from lando_messaging.workqueue import WorkQueueProcessor, DisconnectingWorkQueueProcessor
 
 
 class JobCommands(object):
@@ -53,18 +53,17 @@ class MessageRouter(object):
     """
     Listens for messages on the AMQP queue and runs the appropriate method on an object.
     """
-    def __init__(self, config, obj, queue_name, command_names, disconnect_while_processing):
+    def __init__(self, config, obj, queue_name, command_names, processor_constructor=WorkQueueProcessor):
         """
         Setup for listening on queue_name for command_names and calling methods on obj when commands come in.
         :param config: WorkerConfig/ServerConfig: settings for connecting to the queue
         :param obj: object: lando/lando_worker object that will have methods run on
         :param queue_name: str: name of the queue we should listen on
         :param command_names: [str]: list of JobCommands that obj has implemented
-        :param disconnect_while_processing: bool: disconnect from queue while processing (for long running methods)
+        :param func(config, queue_name): constructor for a WorkQueueProcessor type object
         """
         self.queue_name = queue_name
-        self.processor = WorkQueueProcessor(config, queue_name,
-                                            disconnect_while_processing=disconnect_while_processing)
+        self.processor = processor_constructor(config, queue_name)
         for command in command_names:
             self.processor.add_command_by_method_name(command, obj)
 
@@ -74,6 +73,12 @@ class MessageRouter(object):
         Delete the queue we are listening on or call processor.shutdown() to end loop.
         """
         self.processor.process_messages_loop()
+
+    def shutdown(self):
+        """
+        Method that can be called from a command to terminate the message processing loop
+        """
+        self.processor.shutdown()
 
     @staticmethod
     def make_lando_router(config, obj, queue_name):
@@ -85,7 +90,7 @@ class MessageRouter(object):
         :return MessageRouter
         """
         return MessageRouter(config, obj, queue_name, LANDO_INCOMING_MESSAGES,
-                             disconnect_while_processing=False)
+                             processor_constructor=WorkQueueProcessor)
 
     @staticmethod
     def make_worker_router(config, obj, queue_name):
@@ -96,7 +101,7 @@ class MessageRouter(object):
         :param queue_name: str: name of the queue we will listen on.
         """
         return MessageRouter(config, obj, queue_name, LANDO_WORKER_INCOMING_MESSAGES,
-                             disconnect_while_processing=True)
+                             processor_constructor=DisconnectingWorkQueueProcessor)
 
 
 class StartJobPayload(object):

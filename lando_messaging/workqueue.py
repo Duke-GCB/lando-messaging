@@ -186,13 +186,11 @@ class WorkQueueProcessor(object):
     Call add_command to specify operations to run for each WorkRequest.command.
     """
     def __init__(self, config, queue_name,
-                 on_version_mismatch=raise_on_version_mismatch,
-                 disconnect_while_processing=False):
+                 on_version_mismatch=raise_on_version_mismatch):
         """
         Creates connection with host, username, and password from config.
         :param config: config.Config: contains work queue configuration
         :param on_version_mismatch: func(WorkRequest, str): called when we receive a message with a different version
-        :param disconnect_while_processing: bool: disconnect from queue while processing (for long running methods)
         """
         self.connection = WorkQueueConnection(config)
         self.queue_name = queue_name
@@ -201,7 +199,6 @@ class WorkQueueProcessor(object):
         self.version = get_version_str()
         self.work_request = None
         self.receiving_messages = False
-        self.disconnect_while_processing = disconnect_while_processing
 
     def add_command_by_method_name(self, command, obj):
         """
@@ -239,17 +236,15 @@ class WorkQueueProcessor(object):
         """
         self.receiving_messages = True
         try:
-            if self.disconnect_while_processing:
-                self._process_messages_with_disconnect()
-            else:
-                self._process_messages_loop_stay_connected()
+            self.process_messages_loop_internal()
         except pika.exceptions.ConnectionClosed as ex:
             logging.error("Connection closed {}.".format(ex))
             raise
 
-    def _process_messages_loop_stay_connected(self):
+    def process_messages_loop_internal(self):
         """
         Busy loop that processes incoming WorkRequest messages via functions specified by add_command.
+        Terminates if a command runs shutdown method
         """
         logging.info("Starting work queue loop.")
         self.connection.receive_loop_with_callback(self.queue_name, self.process_message)
@@ -266,18 +261,6 @@ class WorkQueueProcessor(object):
         ch.basic_ack(delivery_tag=method.delivery_tag)
         self.process_work_request()
 
-    def _process_messages_with_disconnect(self):
-        while self.receiving_messages:
-            self.connection.receive_loop_with_callback(self.queue_name, self.save_work_request_and_close)
-            if self.work_request:
-                self.process_work_request()
-
-    def save_work_request_and_close(self, ch, method, properties, body):
-        self.work_request = pickle.loads(body)
-        ch.basic_ack(delivery_tag=method.delivery_tag)
-        ch.stop_consuming()
-        self.connection.close()
-
     def process_work_request(self):
         if self.work_request.version != self.version:
             self.on_version_mismatch(self.work_request, self.version)
@@ -287,6 +270,49 @@ class WorkQueueProcessor(object):
             func(self.work_request.payload)
         else:
             logging.error("Unknown command: {}".format(self.work_request.command))
+
+
+class DisconnectingWorkQueueProcessor(WorkQueueProcessor):
+    """
+    Processes incoming WorkRequest messages from the queue.
+    Call add_command to specify operations to run for each WorkRequest.command.
+    Adds support for long running message processing by disconnecting while running a command.
+    """
+    def __init__(self, config, queue_name,
+                 on_version_mismatch=raise_on_version_mismatch):
+        """
+        Creates connection with host, username, and password from config.
+        :param config: config.Config: contains work queue configuration
+        :param on_version_mismatch: func(WorkRequest, str): called when we receive a message with a different version
+        """
+        self.connection = WorkQueueConnection(config)
+        self.queue_name = queue_name
+        self.on_version_mismatch = on_version_mismatch
+        self.command_name_to_func = {}
+        self.version = get_version_str()
+        self.work_request = None
+        self.receiving_messages = False
+
+    def process_messages_loop_internal(self):
+        """
+        Busy loop that processes incoming WorkRequest messages via functions specified by add_command.
+        Disconnects while servicing a message, reconnects once finished processing a message
+        Terminates if a command runs shutdown method
+        """
+        while self.receiving_messages:
+            # connect to AMQP server and listen for 1 message then disconnect
+            self.connection.receive_loop_with_callback(self.queue_name, self.save_work_request_and_close)
+            if self.work_request:
+                self.process_work_request()
+
+    def save_work_request_and_close(self, ch, method, properties, body):
+        """
+        Save message body and close connection
+        """
+        self.work_request = pickle.loads(body)
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        ch.stop_consuming()
+        self.connection.close()
 
 
 class WorkProgressQueue(object):

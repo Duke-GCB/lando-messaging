@@ -3,7 +3,7 @@ from unittest import TestCase, skipIf
 import os
 import pickle
 from lando_messaging.workqueue import WorkQueueConnection, WorkQueueProcessor, WorkQueueClient, WorkProgressQueue, \
-    WorkRequest, get_version_str, Config
+    WorkRequest, get_version_str, Config, DisconnectingWorkQueueProcessor
 from mock import MagicMock, patch
 
 INTEGRATION_TEST = os.environ.get('INTEGRATION_TEST') == 'true'
@@ -95,6 +95,13 @@ class TestWorkQueueProcessor(TestCase):
     def do_work(self, payload):
         self.payload = payload
 
+    @patch('lando_messaging.workqueue.WorkQueueConnection')
+    def test_process_messages_loop_calls_blocking_method(self, mock_work_queue_connection):
+        processor = WorkQueueProcessor(MagicMock(), 'test')
+        processor.process_messages_loop()  # falls through because we mocked the connection
+        processor.connection.receive_loop_with_callback.assert_called_with('test', processor.process_message)
+        self.assertEqual(processor.receiving_messages, True)
+
     def test_default_mismatch_version_raises(self):
         processor = WorkQueueProcessor(MagicMock(), 'test')
         processor.add_command('dowork', self.do_work)
@@ -116,3 +123,82 @@ class TestWorkQueueProcessor(TestCase):
         request.version = '0.0.0'
         processor.process_message(MagicMock(), MagicMock(), None, pickle.dumps(request))
         self.assertEqual('evenbetter', self.payload)
+
+    def test_process_messages_loop_with_shutdown_call(self):
+        """
+        Test that the loop exits when a command runs shutdown
+        """
+        processor = WorkQueueProcessor(MagicMock(), 'test2')
+
+        def mock_receive_loop_with_callback(queue_name, func):
+            processor.shutdown()
+
+        # replace AMQP looping method with mock above
+        processor.connection.receive_loop_with_callback = mock_receive_loop_with_callback
+
+        processor.process_messages_loop()
+
+
+class TestDisconnectingWorkQueueProcessor(TestCase):
+    def setUp(self):
+        self.payload = None
+
+    def do_work(self, payload):
+        self.payload = payload
+
+    def test_default_mismatch_version_raises(self):
+        processor = DisconnectingWorkQueueProcessor(MagicMock(), 'test')
+        processor.add_command('dowork', self.do_work)
+        request = WorkRequest('dowork', 'somedata')
+        request.version = '0.0.0'
+        with self.assertRaises(ValueError) as err_context:
+            processor.process_message(MagicMock(), MagicMock(), None, pickle.dumps(request))
+        self.assertEqual(str(err_context.exception), 'Received version mismatch.')
+
+    def upgrade_payload(self, work_request, our_version):
+        work_request.payload = 'evenbetter'
+        work_request.version = our_version
+
+    def test_default_mismatch_version_with_override(self):
+        # We pretend to upgrade the request payload
+        processor = DisconnectingWorkQueueProcessor(MagicMock(), 'test', self.upgrade_payload)
+        processor.add_command('dowork', self.do_work)
+        request = WorkRequest('dowork', 'somedata')
+        request.version = '0.0.0'
+        processor.process_message(MagicMock(), MagicMock(), None, pickle.dumps(request))
+        self.assertEqual('evenbetter', self.payload)
+
+    @patch('lando_messaging.workqueue.WorkQueueConnection')
+    @patch('lando_messaging.workqueue.pickle')
+    def test_process_messages_loop_disconnects(self, mock_pickle, mock_work_queue_connection):
+        processor = DisconnectingWorkQueueProcessor(MagicMock(), 'test2')
+        mock_pickle.loads.return_value = MagicMock(version=processor.version)
+
+        def mock_receive_loop_with_callback(queue_name, func):
+            self.assertEqual(func, processor.save_work_request_and_close)
+            mock_channel = MagicMock()
+            func(ch=mock_channel, method=MagicMock(), properties=None, body=None)
+            self.assertEqual(processor.receiving_messages, True)
+            mock_channel.stop_consuming.assert_called()
+            # Manually Force loop to exit (so we can cleanly test that the connection was closed)
+            processor.receiving_messages = False
+
+        # replace AMQP looping method with mock above
+        processor.connection.receive_loop_with_callback = mock_receive_loop_with_callback
+
+        processor.process_messages_loop()
+        processor.connection.close.assert_called()
+
+    def test_process_messages_loop_with_shutdown_call(self):
+        """
+        Test that the loop exits when a command runs shutdown
+        """
+        processor = DisconnectingWorkQueueProcessor(MagicMock(), 'test2')
+
+        def mock_receive_loop_with_callback(queue_name, func):
+            processor.shutdown()
+
+        # replace AMQP looping method with mock above
+        processor.connection.receive_loop_with_callback = mock_receive_loop_with_callback
+
+        processor.process_messages_loop()
