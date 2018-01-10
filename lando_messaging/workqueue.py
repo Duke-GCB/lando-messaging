@@ -37,6 +37,7 @@ class WorkQueueConnection(object):
         self.host = work_queue_config.host
         self.username = work_queue_config.username
         self.password = work_queue_config.password
+        self.heartbeat_interval = None
         self.connection = None
 
     def connect(self):
@@ -45,8 +46,9 @@ class WorkQueueConnection(object):
         """
         logging.info("Connecting to {} with user {}.".format(self.host, self.username))
         credentials = pika.PlainCredentials(self.username, self.password)
-        # Setting heartbeat to 0 so it will be disabled and long running jobs will not timeout.
-        connection_params = pika.ConnectionParameters(host=self.host, credentials=credentials, heartbeat_interval=0)
+        connection_params = pika.ConnectionParameters(host=self.host,
+                                                      credentials=credentials,
+                                                      heartbeat_interval=self.heartbeat_interval)
         self.connection = pika.BlockingConnection(connection_params)
 
     def close(self):
@@ -183,7 +185,8 @@ class WorkQueueProcessor(object):
     Processes incoming WorkRequest messages from the queue.
     Call add_command to specify operations to run for each WorkRequest.command.
     """
-    def __init__(self, config, queue_name, on_version_mismatch=raise_on_version_mismatch):
+    def __init__(self, config, queue_name,
+                 on_version_mismatch=raise_on_version_mismatch):
         """
         Creates connection with host, username, and password from config.
         :param config: config.Config: contains work queue configuration
@@ -194,6 +197,8 @@ class WorkQueueProcessor(object):
         self.on_version_mismatch = on_version_mismatch
         self.command_name_to_func = {}
         self.version = get_version_str()
+        self.work_request = None
+        self.receiving_messages = False
 
     def add_command_by_method_name(self, command, obj):
         """
@@ -223,18 +228,26 @@ class WorkQueueProcessor(object):
         """
         logging.info("Work queue shutdown.")
         self.connection.close()
+        self.receiving_messages = False
 
     def process_messages_loop(self):
         """
-        Busy loop that processes incoming WorkRequest messages via functions specified by add_command.
-        :return:
+        Processes incoming WorkRequest messages one at a time via functions specified by add_command.
         """
+        self.receiving_messages = True
         try:
-            logging.info("Starting work queue loop.")
-            self.connection.receive_loop_with_callback(self.queue_name, self.process_message)
+            self.process_messages_loop_internal()
         except pika.exceptions.ConnectionClosed as ex:
             logging.error("Connection closed {}.".format(ex))
             raise
+
+    def process_messages_loop_internal(self):
+        """
+        Busy loop that processes incoming WorkRequest messages via functions specified by add_command.
+        Terminates if a command runs shutdown method
+        """
+        logging.info("Starting work queue loop.")
+        self.connection.receive_loop_with_callback(self.queue_name, self.process_message)
 
     def process_message(self, ch, method, properties, body):
         """
@@ -244,16 +257,62 @@ class WorkQueueProcessor(object):
         :param properties: pika.BasicProperties
         :param body: str: payload of the message (picked WorkRequest)
         """
-        work_request = pickle.loads(body)
+        self.work_request = pickle.loads(body)
         ch.basic_ack(delivery_tag=method.delivery_tag)
-        if work_request.version != self.version:
-            self.on_version_mismatch(work_request, self.version)
-        func = self.command_name_to_func.get(work_request.command)
+        self.process_work_request()
+
+    def process_work_request(self):
+        if self.work_request.version != self.version:
+            self.on_version_mismatch(self.work_request, self.version)
+        func = self.command_name_to_func.get(self.work_request.command)
         if func:
-            logging.info("Running command {}.".format(work_request.command))
-            func(work_request.payload)
+            logging.info("Running command {}.".format(self.work_request.command))
+            func(self.work_request.payload)
         else:
-            logging.error("Unknown command: {}".format(work_request.command))
+            logging.error("Unknown command: {}".format(self.work_request.command))
+
+
+class DisconnectingWorkQueueProcessor(WorkQueueProcessor):
+    """
+    Processes incoming WorkRequest messages from the queue.
+    Call add_command to specify operations to run for each WorkRequest.command.
+    Adds support for long running message processing by disconnecting while running a command.
+    """
+    def __init__(self, config, queue_name,
+                 on_version_mismatch=raise_on_version_mismatch):
+        """
+        Creates connection with host, username, and password from config.
+        :param config: config.Config: contains work queue configuration
+        :param on_version_mismatch: func(WorkRequest, str): called when we receive a message with a different version
+        """
+        self.connection = WorkQueueConnection(config)
+        self.queue_name = queue_name
+        self.on_version_mismatch = on_version_mismatch
+        self.command_name_to_func = {}
+        self.version = get_version_str()
+        self.work_request = None
+        self.receiving_messages = False
+
+    def process_messages_loop_internal(self):
+        """
+        Busy loop that processes incoming WorkRequest messages via functions specified by add_command.
+        Disconnects while servicing a message, reconnects once finished processing a message
+        Terminates if a command runs shutdown method
+        """
+        while self.receiving_messages:
+            # connect to AMQP server and listen for 1 message then disconnect
+            self.connection.receive_loop_with_callback(self.queue_name, self.save_work_request_and_close)
+            if self.work_request:
+                self.process_work_request()
+
+    def save_work_request_and_close(self, ch, method, properties, body):
+        """
+        Save message body and close connection
+        """
+        self.work_request = pickle.loads(body)
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        ch.stop_consuming()
+        self.connection.close()
 
 
 class WorkProgressQueue(object):
