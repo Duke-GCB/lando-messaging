@@ -23,7 +23,7 @@ jobs:
       - run:
           command: |
             . venv/bin/activate
-            nosetests
+            INTEGRATION_TEST=true nosetests
       - store_test_results:
           path: test-results
       - store_artifacts:
