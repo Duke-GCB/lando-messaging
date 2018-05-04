@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/python:3.6.4
+      - image: circleci/python:3.6
       - image: rabbitmq:3.6.6
     steps:
       - checkout
@@ -29,3 +29,54 @@ jobs:
       - store_artifacts:
           path: test-results
           destination: tr1
+deploy:
+    docker:
+      - image: circleci/python:3.6
+    steps:
+      - checkout
+
+      - restore_cache:
+          key: deps9-{{ .Branch }}-{{ checksum "setup.py" }}
+
+      - run:
+          name: install python dependencies
+          command: |
+            sudo pip install pipenv
+            pipenv install -e .
+            pipenv install twine
+
+      - save_cache:
+          key: deps9-{{ .Branch }}-{{ checksum "setup.py" }}
+          paths:
+            - "venv"
+
+      - run:
+          name: init .pypirc
+          command: |
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+
+      - run:
+          name: upload to pypi
+          command: |
+            pipenv run "python setup.py bdist_wheel --universal"
+            pipenv run "twine upload --username ${PYPI_USERNAME} --password ${PYPI_PASSWORD} dist/*"
+
+workflows:
+  version: 2
+  build_and_deploy:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /.*/
+      - deploy:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)*/
+            branches:
+              only:
+                - master
