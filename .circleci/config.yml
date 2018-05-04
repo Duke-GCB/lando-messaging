@@ -9,7 +9,7 @@ jobs:
       - run: sudo chown -R circleci:circleci /usr/local/bin
       - run: sudo chown -R circleci:circleci /usr/local/lib/python3.6/site-packages
       - restore_cache:
-          key: depsbuild-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "devRequirements.txt" }}
+          key: deps-build-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "devRequirements.txt" }}
       - run:
           command: |
             python3 -m venv venv
@@ -17,7 +17,7 @@ jobs:
             python3 setup.py install
             pip install -r devRequirements.txt
       - save_cache:
-          key: depsbuild-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "devRequirements.txt" }}
+          key: deps-build-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "devRequirements.txt" }}
           paths:
             - "venv"
       - run:
@@ -35,7 +35,7 @@ deploy:
       - checkout
 
       - restore_cache:
-          key: depsdeploy-{{ .Branch }}-{{ checksum "setup.py" }}
+          key: deps-deploy-{{ .Branch }}-{{ checksum "setup.py" }}
 
       - run:
           name: install python dependencies
@@ -46,7 +46,7 @@ deploy:
             pip install twine
 
       - save_cache:
-          key: depsdeploy-{{ .Branch }}-{{ checksum "setup.py" }}
+          key: deps-deploy-{{ .Branch }}-{{ checksum "setup.py" }}
           paths:
             - "venv"
       - run:
