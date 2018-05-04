@@ -22,7 +22,8 @@ jobs:
             - "venv"
       - run:
           command: |
-            INTEGRATION_TEST=true pipenv run "nosetests"
+            . venv/bin/activate
+            nosetests
       - store_test_results:
           path: test-results
       - store_artifacts:
