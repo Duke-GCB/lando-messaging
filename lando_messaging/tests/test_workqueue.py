@@ -20,7 +20,7 @@ class TestWorkQueue(TestCase):
         Test that we can send a message through rabbit and receive it on our end.
         """
         my_queue_name = "testing1"
-        my_payload = "HEYME"
+        my_payload = b"HEYME"
         work_queue_connection = WorkQueueConnection(self.config)
         work_queue_connection.connect()
         work_queue_connection.send_durable_message(queue_name=my_queue_name, body=my_payload)
