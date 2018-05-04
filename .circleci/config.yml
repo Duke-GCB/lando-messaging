@@ -9,18 +9,17 @@ jobs:
       - run: sudo chown -R circleci:circleci /usr/local/bin
       - run: sudo chown -R circleci:circleci /usr/local/lib/python3.6/site-packages
       - restore_cache:
-          key: deps9-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "devRequirements.txt" }}
+          key: depsbuild-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "devRequirements.txt" }}
       - run:
           command: |
-            sudo pip install pipenv
-            pipenv install -e .
-            pipenv install -r devRequirements.txt
+            python3 -m venv venv
+            . venv/bin/activate
+            python3 setup.py install
+            pip install -r devRequirements.txt
       - save_cache:
-          key: deps9-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "devRequirements.txt" }}
+          key: depsbuild-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "devRequirements.txt" }}
           paths:
-            - ".venv"
-            - "/usr/local/bin"
-            - "/usr/local/lib/python3.6/site-packages"
+            - "venv"
       - run:
           command: |
             INTEGRATION_TEST=true pipenv run "nosetests"
@@ -36,32 +35,26 @@ deploy:
       - checkout
 
       - restore_cache:
-          key: deps9-{{ .Branch }}-{{ checksum "setup.py" }}
+          key: depsdeploy-{{ .Branch }}-{{ checksum "setup.py" }}
 
       - run:
           name: install python dependencies
           command: |
-            sudo pip install pipenv
-            pipenv install -e .
-            pipenv install twine
+            python3 -m venv venv
+            . venv/bin/activate
+            python3 setup.py install
+            pip install twine
 
       - save_cache:
-          key: deps9-{{ .Branch }}-{{ checksum "setup.py" }}
+          key: depsdeploy-{{ .Branch }}-{{ checksum "setup.py" }}
           paths:
             - "venv"
-
-      - run:
-          name: init .pypirc
-          command: |
-            echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
-            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
-
       - run:
           name: upload to pypi
           command: |
-            pipenv run "python setup.py bdist_wheel --universal"
-            pipenv run "twine upload --username ${PYPI_USERNAME} --password ${PYPI_PASSWORD} dist/*"
+            . venv/bin/activate
+            python setup.py bdist_wheel --universal
+            twine upload --username "${PYPI_USERNAME}" --password "${PYPI_PASSWORD}" dist/*
 
 workflows:
   version: 2
