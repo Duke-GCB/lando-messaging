@@ -14,7 +14,7 @@ jobs:
           command: |
             sudo pip install pipenv
             pipenv install -e .
-            pipenv install -r devRequirements.txt
+            INTEGRATION_TEST=true pipenv install -r devRequirements.txt
       - save_cache:
           key: deps9-{{ .Branch }}-{{ checksum "Pipfile.lock" }}
           paths:
