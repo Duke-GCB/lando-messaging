@@ -1,0 +1,76 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/python:3.6
+      - image: rabbitmq:3.6.6
+    steps:
+      - checkout
+      - run: sudo chown -R circleci:circleci /usr/local/bin
+      - run: sudo chown -R circleci:circleci /usr/local/lib/python3.6/site-packages
+      - restore_cache:
+          key: deps-build-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "devRequirements.txt" }}
+      - run:
+          command: |
+            python3 -m venv venv
+            . venv/bin/activate
+            python3 setup.py install
+            pip install -r devRequirements.txt
+      - save_cache:
+          key: deps-build-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "devRequirements.txt" }}
+          paths:
+            - "venv"
+      - run:
+          command: |
+            . venv/bin/activate
+            INTEGRATION_TEST=true nosetests
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: test-results
+          destination: tr1
+deploy:
+    docker:
+      - image: circleci/python:3.6
+    steps:
+      - checkout
+
+      - restore_cache:
+          key: deps-deploy-{{ .Branch }}-{{ checksum "setup.py" }}
+
+      - run:
+          name: install python dependencies
+          command: |
+            python3 -m venv venv
+            . venv/bin/activate
+            python3 setup.py install
+            pip install twine
+
+      - save_cache:
+          key: deps-deploy-{{ .Branch }}-{{ checksum "setup.py" }}
+          paths:
+            - "venv"
+      - run:
+          name: upload to pypi
+          command: |
+            . venv/bin/activate
+            python setup.py bdist_wheel --universal
+            twine upload --username "${PYPI_USERNAME}" --password "${PYPI_PASSWORD}" dist/*
+
+workflows:
+  version: 2
+  build_and_deploy:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /.*/
+      - deploy:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)*/
+            branches:
+              only:
+                - master
