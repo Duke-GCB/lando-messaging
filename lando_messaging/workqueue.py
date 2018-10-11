@@ -1,7 +1,7 @@
 """
 Code for processing/sending messages from/to a queue(AMQP)
 """
-from __future__ import absolute_import
+
 import logging
 import pkg_resources
 import pika
@@ -164,7 +164,8 @@ class WorkQueueClient(object):
         """
         request = WorkRequest(command, payload)
         logging.info("Sending {} message to queue {}.".format(request.command, self.queue_name))
-        self.connection.send_durable_message(self.queue_name, pickle.dumps(request))
+        # setting protocol to version 2 to be compatible with python2
+        self.connection.send_durable_message(self.queue_name, pickle.dumps(request, protocol=2))
         logging.info("Sent {} message.".format(request.command, self.queue_name))
 
     def delete_queue(self):

@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='lando-messaging',
-      version='0.7.3',
+      version='0.7.4',
       description='Lando workflow messaging component',
       url='https://github.com/Duke-GCB/lando-messaging',
       author='John Bradley',

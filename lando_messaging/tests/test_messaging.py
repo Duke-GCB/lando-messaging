@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+
 from unittest import TestCase, skipIf
 import os
 from lando_messaging.messaging import MessageRouter, LANDO_INCOMING_MESSAGES, LANDO_WORKER_INCOMING_MESSAGES
