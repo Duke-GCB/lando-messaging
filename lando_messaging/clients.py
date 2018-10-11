@@ -2,7 +2,7 @@
 Classes that simplify sending messages to the workqueue.
 These send messages that will be recevied by MessageRouter.
 """
-from __future__ import absolute_import
+
 from lando_messaging.messaging import JobCommands
 from lando_messaging.messaging import StartJobPayload, RestartJobPayload, CancelJobPayload
 from lando_messaging.messaging import JobStepCompletePayload, JobStepErrorPayload

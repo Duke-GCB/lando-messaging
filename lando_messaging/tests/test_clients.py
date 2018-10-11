@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+
 from unittest import TestCase
 from lando_messaging.clients import LandoWorkerClient, JobCommands
 from mock import MagicMock, patch

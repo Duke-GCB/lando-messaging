@@ -1,10 +1,10 @@
-from __future__ import absolute_import
+
 from unittest import TestCase, skipIf
 import os
 import pickle
 from lando_messaging.workqueue import WorkQueueConnection, WorkQueueProcessor, WorkQueueClient, WorkProgressQueue, \
     WorkRequest, get_version_str, Config, DisconnectingWorkQueueProcessor
-from mock import MagicMock, patch
+from mock import MagicMock, patch, Mock
 
 INTEGRATION_TEST = os.environ.get('INTEGRATION_TEST') == 'true'
 
@@ -85,7 +85,7 @@ class TestGetVersionStr(TestCase):
         version_str = get_version_str()
         self.assertEqual(type(version_str), str)
         parts = version_str.split(".")
-        self.assertRegexpMatches(version_str, '^\d+.\d+.\d+$')
+        self.assertRegex(version_str, '^\d+.\d+.\d+$')
 
 
 class TestWorkQueueProcessor(TestCase):
@@ -202,3 +202,13 @@ class TestDisconnectingWorkQueueProcessor(TestCase):
         processor.connection.receive_loop_with_callback = mock_receive_loop_with_callback
 
         processor.process_messages_loop()
+
+
+class WorkQueueClientTestCase(TestCase):
+    @patch('lando_messaging.workqueue.WorkQueueConnection')
+    @patch('lando_messaging.workqueue.WorkRequest')
+    @patch('lando_messaging.workqueue.pickle')
+    def test_send_protocol_version(self, mock_pickle, mock_work_request, mock_work_queue_connection):
+        client = WorkQueueClient(config=Mock(), queue_name='myqueue')
+        client.send('test', 'data')
+        mock_pickle.dumps.assert_called_with(mock_work_request.return_value, protcol=2)

@@ -1,7 +1,7 @@
 """
 Defines all commands/payloads and a message receiver which allow lando and lando_worker to communicate over AMQP.
 """
-from __future__ import absolute_import
+
 from lando_messaging.workqueue import WorkQueueProcessor, DisconnectingWorkQueueProcessor
 
 
