@@ -4,7 +4,7 @@ import os
 import pickle
 from lando_messaging.workqueue import WorkQueueConnection, WorkQueueProcessor, WorkQueueClient, WorkProgressQueue, \
     WorkRequest, get_version_str, Config, DisconnectingWorkQueueProcessor
-from mock import MagicMock, patch, Mock
+from mock import MagicMock, patch, Mock, ANY
 
 INTEGRATION_TEST = os.environ.get('INTEGRATION_TEST') == 'true'
 
@@ -211,4 +211,5 @@ class WorkQueueClientTestCase(TestCase):
     def test_send_protocol_version(self, mock_pickle, mock_work_request, mock_work_queue_connection):
         client = WorkQueueClient(config=Mock(), queue_name='myqueue')
         client.send('test', 'data')
-        mock_pickle.dumps.assert_called_with(mock_work_request.return_value, protcol=2)
+        args, kwargs = mock_pickle.dumps.call_args
+        self.assertEqual(kwargs['protocol'], 2)
