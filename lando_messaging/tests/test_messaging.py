@@ -1,8 +1,9 @@
 
 from unittest import TestCase, skipIf
+from unittest.mock import patch, Mock, call
 import os
 from lando_messaging.messaging import MessageRouter, LANDO_INCOMING_MESSAGES, LANDO_WORKER_INCOMING_MESSAGES
-from lando_messaging.messaging import StageJobPayload, RunJobPayload, StoreJobOutputPayload
+from lando_messaging.messaging import StageJobPayload, RunJobPayload, StoreJobOutputPayload, JobCommands
 from lando_messaging.clients import LandoClient, LandoWorkerClient
 from lando_messaging.workqueue import Config
 
@@ -70,6 +71,18 @@ class FakeWorkflow(object):
         self.job_order = ''
         self.url = ''
         self.object_name = ''
+
+
+class MessageRouterTestCase(TestCase):
+    @patch('lando_messaging.messaging.WorkQueueProcessor')
+    def test_make_lando_router_organize_output_setup(self, mock_work_queue_processor):
+        mock_obj = Mock()
+        mock_config = Mock()
+        MessageRouter.make_lando_router(mock_config, mock_obj, queue_name='somequeue')
+        mock_work_queue_processor.return_value.add_command_by_method_name.assert_has_calls([
+            call(JobCommands.ORGANIZE_OUTPUT_COMPLETE, mock_obj),
+            call(JobCommands.ORGANIZE_OUTPUT_ERROR, mock_obj),
+        ])
 
 
 @skipIf(not INTEGRATION_TEST, 'Integration tests require a local rabbitmq instance')
