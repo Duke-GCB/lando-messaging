@@ -43,6 +43,12 @@ class FakeLando(object):
     def run_job_error(self, payload):
         self.run_job_error_payload = payload
 
+    def organize_output_complete(self, payload):
+        self.organize_output_complete_payload = payload
+
+    def organize_output_error(self, payload):
+        self.organize_output_error_payload = payload
+
     def store_job_output_complete(self, payload):
         self.store_job_output_complete_payload = payload
 
@@ -146,6 +152,35 @@ class TestMessagingAndClients(TestCase):
         self.assertEqual(fake_lando.store_job_output_complete_payload.job_id, 5)
         self.assertEqual(fake_lando.store_job_output_complete_payload.output_project_info, 'project_id')
         self.assertEqual(fake_lando.store_job_output_error_payload.message, "Oops3")
+
+    def test_organize_output_messages(self):
+        queue_name = "lando"
+        lando_client = LandoClient(self.config, queue_name)
+
+        fake_lando = Mock()
+        self.organize_output_complete_payload = None
+        def record_complete_payload(payload):
+            self.organize_output_complete_payload = payload
+        self.organize_output_error_payload = None
+        def record_error_payload(payload):
+            self.organize_output_error_payload = payload
+            fake_lando.router.shutdown()
+        fake_lando.organize_output_complete = record_complete_payload
+        fake_lando.organize_output_error = record_error_payload
+
+        router = MessageRouter.make_lando_router(self.config, fake_lando, queue_name)
+        fake_lando.router = router
+
+        run_job_payload = RunJobPayload(job_details=FakeJobDetails(5), workflow=FakeWorkflow(), vm_instance_name='test')
+        run_job_payload.success_command = JobCommands.ORGANIZE_OUTPUT_COMPLETE
+        run_job_payload.error_command = JobCommands.ORGANIZE_OUTPUT_ERROR
+        lando_client.job_step_complete(run_job_payload)
+        lando_client.job_step_error(run_job_payload, "Oops3")
+
+        router.run()
+
+        self.assertEqual(self.organize_output_complete_payload.job_id, 5)
+        self.assertEqual(self.organize_output_error_payload.message, "Oops3")
 
     def test_raises_for_mismatch_job_step_complete(self):
         # job_step_complete should not be used with StoreJobOutputPayload
