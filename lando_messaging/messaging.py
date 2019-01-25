@@ -22,6 +22,10 @@ class JobCommands(object):
     RUN_JOB_COMPLETE = 'run_job_complete'                    # lando_worker -> lando
     RUN_JOB_ERROR = 'run_job_error'                          # lando_worker -> lando
 
+    # only for use with k8s lando/watcher
+    ORGANIZE_OUTPUT_COMPLETE = 'organize_output_complete'    # watcher -> lando
+    ORGANIZE_OUTPUT_ERROR = 'organize_output_error'          # watcher -> lando
+
     STORE_JOB_OUTPUT = 'store_job_output'                    # lando -> lando_worker
     STORE_JOB_OUTPUT_COMPLETE = 'store_job_output_complete'  # lando_worker -> lando
     STORE_JOB_OUTPUT_ERROR = 'store_job_output_error'        # lando_worker -> lando
@@ -38,7 +42,9 @@ LANDO_INCOMING_MESSAGES = [
     JobCommands.RUN_JOB_COMPLETE,
     JobCommands.RUN_JOB_ERROR,
     JobCommands.STORE_JOB_OUTPUT_COMPLETE,
-    JobCommands.STORE_JOB_OUTPUT_ERROR
+    JobCommands.STORE_JOB_OUTPUT_ERROR,
+    JobCommands.ORGANIZE_OUTPUT_COMPLETE,
+    JobCommands.ORGANIZE_OUTPUT_ERROR,
 ]
 
 # Commands that lando_worker will receive.

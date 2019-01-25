@@ -1,8 +1,9 @@
 
 from unittest import TestCase, skipIf
+from unittest.mock import patch, Mock, call
 import os
 from lando_messaging.messaging import MessageRouter, LANDO_INCOMING_MESSAGES, LANDO_WORKER_INCOMING_MESSAGES
-from lando_messaging.messaging import StageJobPayload, RunJobPayload, StoreJobOutputPayload
+from lando_messaging.messaging import StageJobPayload, RunJobPayload, StoreJobOutputPayload, JobCommands
 from lando_messaging.clients import LandoClient, LandoWorkerClient
 from lando_messaging.workqueue import Config
 
@@ -42,6 +43,12 @@ class FakeLando(object):
     def run_job_error(self, payload):
         self.run_job_error_payload = payload
 
+    def organize_output_complete(self, payload):
+        self.organize_output_complete_payload = payload
+
+    def organize_output_error(self, payload):
+        self.organize_output_error_payload = payload
+
     def store_job_output_complete(self, payload):
         self.store_job_output_complete_payload = payload
 
@@ -70,6 +77,18 @@ class FakeWorkflow(object):
         self.job_order = ''
         self.url = ''
         self.object_name = ''
+
+
+class MessageRouterTestCase(TestCase):
+    @patch('lando_messaging.messaging.WorkQueueProcessor')
+    def test_make_lando_router_organize_output_setup(self, mock_work_queue_processor):
+        mock_obj = Mock()
+        mock_config = Mock()
+        MessageRouter.make_lando_router(mock_config, mock_obj, queue_name='somequeue')
+        mock_work_queue_processor.return_value.add_command_by_method_name.assert_has_calls([
+            call(JobCommands.ORGANIZE_OUTPUT_COMPLETE, mock_obj),
+            call(JobCommands.ORGANIZE_OUTPUT_ERROR, mock_obj),
+        ])
 
 
 @skipIf(not INTEGRATION_TEST, 'Integration tests require a local rabbitmq instance')
@@ -133,6 +152,35 @@ class TestMessagingAndClients(TestCase):
         self.assertEqual(fake_lando.store_job_output_complete_payload.job_id, 5)
         self.assertEqual(fake_lando.store_job_output_complete_payload.output_project_info, 'project_id')
         self.assertEqual(fake_lando.store_job_output_error_payload.message, "Oops3")
+
+    def test_organize_output_messages(self):
+        queue_name = "lando"
+        lando_client = LandoClient(self.config, queue_name)
+
+        fake_lando = Mock()
+        self.organize_output_complete_payload = None
+        def record_complete_payload(payload):
+            self.organize_output_complete_payload = payload
+        self.organize_output_error_payload = None
+        def record_error_payload(payload):
+            self.organize_output_error_payload = payload
+            fake_lando.router.shutdown()
+        fake_lando.organize_output_complete = record_complete_payload
+        fake_lando.organize_output_error = record_error_payload
+
+        router = MessageRouter.make_lando_router(self.config, fake_lando, queue_name)
+        fake_lando.router = router
+
+        run_job_payload = RunJobPayload(job_details=FakeJobDetails(5), workflow=FakeWorkflow(), vm_instance_name='test')
+        run_job_payload.success_command = JobCommands.ORGANIZE_OUTPUT_COMPLETE
+        run_job_payload.error_command = JobCommands.ORGANIZE_OUTPUT_ERROR
+        lando_client.job_step_complete(run_job_payload)
+        lando_client.job_step_error(run_job_payload, "Oops3")
+
+        router.run()
+
+        self.assertEqual(self.organize_output_complete_payload.job_id, 5)
+        self.assertEqual(self.organize_output_error_payload.message, "Oops3")
 
     def test_raises_for_mismatch_job_step_complete(self):
         # job_step_complete should not be used with StoreJobOutputPayload
