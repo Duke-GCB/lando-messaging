@@ -30,9 +30,13 @@ class JobCommands(object):
     STORE_JOB_OUTPUT_COMPLETE = 'store_job_output_complete'  # lando_worker -> lando
     STORE_JOB_OUTPUT_ERROR = 'store_job_output_error'        # lando_worker -> lando
 
+    # only for use with k8s lando/watcher
+    RECORD_OUTPUT_PROJECT_COMPLETE = 'record_output_project_complete'  # lando_worker -> lando
+    RECORD_OUTPUT_PROJECT_ERROR = 'record_output_project_error'        # lando_worker -> lando
+
 
 # Commands that lando will receive.
-LANDO_INCOMING_MESSAGES = [
+VM_LANDO_INCOMING_MESSAGES = [
     JobCommands.START_JOB,
     JobCommands.RESTART_JOB,
     JobCommands.CANCEL_JOB,
@@ -43,15 +47,29 @@ LANDO_INCOMING_MESSAGES = [
     JobCommands.RUN_JOB_ERROR,
     JobCommands.STORE_JOB_OUTPUT_COMPLETE,
     JobCommands.STORE_JOB_OUTPUT_ERROR,
-    JobCommands.ORGANIZE_OUTPUT_COMPLETE,
-    JobCommands.ORGANIZE_OUTPUT_ERROR,
 ]
 
 # Commands that lando_worker will receive.
-LANDO_WORKER_INCOMING_MESSAGES = [
+VM_LANDO_WORKER_INCOMING_MESSAGES = [
     JobCommands.STAGE_JOB,
     JobCommands.RUN_JOB,
     JobCommands.STORE_JOB_OUTPUT,
+]
+
+K8S_LANDO_INCOMING_MESSAGES = [
+    JobCommands.START_JOB,
+    JobCommands.RESTART_JOB,
+    JobCommands.CANCEL_JOB,
+    JobCommands.STAGE_JOB_COMPLETE,
+    JobCommands.STAGE_JOB_ERROR,
+    JobCommands.RUN_JOB_COMPLETE,
+    JobCommands.RUN_JOB_ERROR,
+    JobCommands.ORGANIZE_OUTPUT_COMPLETE,
+    JobCommands.ORGANIZE_OUTPUT_ERROR,
+    JobCommands.STORE_JOB_OUTPUT_COMPLETE,
+    JobCommands.STORE_JOB_OUTPUT_ERROR,
+    JobCommands.RECORD_OUTPUT_PROJECT_COMPLETE,
+    JobCommands.RECORD_OUTPUT_PROJECT_ERROR,
 ]
 
 
@@ -89,13 +107,25 @@ class MessageRouter(object):
     @staticmethod
     def make_lando_router(config, obj, queue_name):
         """
-        Makes MessageRouter which can listen to queue_name sending lando specific messages to obj.
+        Makes MessageRouter which can listen to queue_name sending messages to the VM version of lando.
         :param config: WorkerConfig/ServerConfig: settings for connecting to the queue
         :param obj: object: implements lando specific methods
         :param queue_name: str: name of the queue we will listen on.
         :return MessageRouter
         """
-        return MessageRouter(config, obj, queue_name, LANDO_INCOMING_MESSAGES,
+        return MessageRouter(config, obj, queue_name, VM_LANDO_INCOMING_MESSAGES,
+                             processor_constructor=WorkQueueProcessor)
+
+    @staticmethod
+    def make_k8s_lando_router(config, obj, queue_name):
+        """
+        Makes MessageRouter which can listen to queue_name sending messages to the k8s version of lando.
+        :param config: WorkerConfig/ServerConfig: settings for connecting to the queue
+        :param obj: object: implements lando specific methods
+        :param queue_name: str: name of the queue we will listen on.
+        :return MessageRouter
+        """
+        return MessageRouter(config, obj, queue_name, K8S_LANDO_INCOMING_MESSAGES,
                              processor_constructor=WorkQueueProcessor)
 
     @staticmethod
@@ -106,7 +136,7 @@ class MessageRouter(object):
         :param obj: object: implements lando_worker specific methods
         :param queue_name: str: name of the queue we will listen on.
         """
-        return MessageRouter(config, obj, queue_name, LANDO_WORKER_INCOMING_MESSAGES,
+        return MessageRouter(config, obj, queue_name, VM_LANDO_WORKER_INCOMING_MESSAGES,
                              processor_constructor=DisconnectingWorkQueueProcessor)
 
 
