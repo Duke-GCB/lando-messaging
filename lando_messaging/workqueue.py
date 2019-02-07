@@ -197,6 +197,7 @@ def raise_on_major_version_mismatch(work_request, local_version):
         logging.info("Ignoring non-major version mismatch request:{} local:{}".format(
             work_request.version, local_version))
 
+
 class WorkQueueProcessor(object):
     """
     Processes incoming WorkRequest messages from the queue.

@@ -3,10 +3,17 @@ from unittest import TestCase, skipIf
 import os
 import pickle
 from lando_messaging.workqueue import WorkQueueConnection, WorkQueueProcessor, WorkQueueClient, WorkProgressQueue, \
-    WorkRequest, get_version_str, Config, DisconnectingWorkQueueProcessor
+    WorkRequest, get_version_str, Config, DisconnectingWorkQueueProcessor, get_major_version
 from mock import MagicMock, patch, Mock, ANY
 
 INTEGRATION_TEST = os.environ.get('INTEGRATION_TEST') == 'true'
+
+
+class TestWorkQueueFunctions(TestCase):
+    def test_get_major_version(self):
+        self.assertEqual(get_major_version('0.2.3'), '0')
+        self.assertEqual(get_major_version('2.3.4'), '2')
+        self.assertEqual(get_major_version('10.3'), '10')
 
 
 @skipIf(not INTEGRATION_TEST, 'Integration tests require a local rabbitmq instance')
