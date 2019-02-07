@@ -24,6 +24,15 @@ def get_version_str():
     return pkg_resources.get_distribution("lando_messaging").version
 
 
+def get_major_version(version_str):
+    """
+    Given a version string separated by '.' return the major verison
+    :param version_str: str: version string
+    :return: str: major version
+    """
+    return version_str.split('.')[0]
+
+
 class WorkQueueConnection(object):
     """
     Connection to a remote AMQP queue for sending work requests from WorkQueueClient to WorkQueueProcessor.
@@ -172,13 +181,21 @@ class WorkQueueClient(object):
         self.connection.delete_queue(self.queue_name)
 
 
-def raise_on_version_mismatch(work_request, local_version):
+def raise_on_major_version_mismatch(work_request, local_version):
     """
-    Raises error because we cannot upgrade the message.
+    Raises error if major version is different. Other wise logs the difference.
     :param work_request: WorkRequest: request that had a different version
     :param local_version: str: our version string that does not match message.version
     """
-    raise ValueError("Received version mismatch.")
+    request_major_version = get_major_version(work_request.version)
+    local_major_version = get_major_version(local_version)
+    if request_major_version != local_major_version:
+        raise ValueError("Received major version mismatch. request:{} local:{}".format(
+            work_request.version, local_version
+        ))
+    else:
+        logging.info("Ignoring non-major version mismatch request:{} local:{}".format(
+            work_request.version, local_version))
 
 
 class WorkQueueProcessor(object):
@@ -187,7 +204,7 @@ class WorkQueueProcessor(object):
     Call add_command to specify operations to run for each WorkRequest.command.
     """
     def __init__(self, config, queue_name,
-                 on_version_mismatch=raise_on_version_mismatch):
+                 on_version_mismatch=raise_on_major_version_mismatch):
         """
         Creates connection with host, username, and password from config.
         :param config: config.Config: contains work queue configuration
@@ -280,7 +297,7 @@ class DisconnectingWorkQueueProcessor(WorkQueueProcessor):
     Adds support for long running message processing by disconnecting while running a command.
     """
     def __init__(self, config, queue_name,
-                 on_version_mismatch=raise_on_version_mismatch):
+                 on_version_mismatch=raise_on_major_version_mismatch):
         """
         Creates connection with host, username, and password from config.
         :param config: config.Config: contains work queue configuration

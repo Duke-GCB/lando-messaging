@@ -3,10 +3,17 @@ from unittest import TestCase, skipIf
 import os
 import pickle
 from lando_messaging.workqueue import WorkQueueConnection, WorkQueueProcessor, WorkQueueClient, WorkProgressQueue, \
-    WorkRequest, get_version_str, Config, DisconnectingWorkQueueProcessor
+    WorkRequest, get_version_str, Config, DisconnectingWorkQueueProcessor, get_major_version
 from mock import MagicMock, patch, Mock, ANY
 
 INTEGRATION_TEST = os.environ.get('INTEGRATION_TEST') == 'true'
+
+
+class TestWorkQueueFunctions(TestCase):
+    def test_get_major_version(self):
+        self.assertEqual(get_major_version('0.2.3'), '0')
+        self.assertEqual(get_major_version('2.3.4'), '2')
+        self.assertEqual(get_major_version('10.3'), '10')
 
 
 @skipIf(not INTEGRATION_TEST, 'Integration tests require a local rabbitmq instance')
@@ -106,10 +113,13 @@ class TestWorkQueueProcessor(TestCase):
         processor = WorkQueueProcessor(MagicMock(), 'test')
         processor.add_command('dowork', self.do_work)
         request = WorkRequest('dowork', 'somedata')
-        request.version = '0.0.0'
+        request.version = '200.0.0'
         with self.assertRaises(ValueError) as err_context:
             processor.process_message(MagicMock(), MagicMock(), None, pickle.dumps(request))
-        self.assertEqual(str(err_context.exception), 'Received version mismatch.')
+        self.assertEqual(
+            str(err_context.exception),
+            'Received major version mismatch. request:{} local:{}'.format('200.0.0', processor.version)
+        )
 
     def upgrade_payload(self, work_request, our_version):
         work_request.payload = 'evenbetter'
@@ -146,14 +156,17 @@ class TestDisconnectingWorkQueueProcessor(TestCase):
     def do_work(self, payload):
         self.payload = payload
 
-    def test_default_mismatch_version_raises(self):
+    def test_default_mismatch_major_version_raises(self):
         processor = DisconnectingWorkQueueProcessor(MagicMock(), 'test')
         processor.add_command('dowork', self.do_work)
         request = WorkRequest('dowork', 'somedata')
-        request.version = '0.0.0'
+        request.version = '200.0.0'
         with self.assertRaises(ValueError) as err_context:
             processor.process_message(MagicMock(), MagicMock(), None, pickle.dumps(request))
-        self.assertEqual(str(err_context.exception), 'Received version mismatch.')
+        self.assertEqual(
+            str(err_context.exception),
+            'Received major version mismatch. request:{} local:{}'.format('200.0.0', processor.version)
+        )
 
     def upgrade_payload(self, work_request, our_version):
         work_request.payload = 'evenbetter'
