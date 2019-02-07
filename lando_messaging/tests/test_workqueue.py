@@ -106,10 +106,13 @@ class TestWorkQueueProcessor(TestCase):
         processor = WorkQueueProcessor(MagicMock(), 'test')
         processor.add_command('dowork', self.do_work)
         request = WorkRequest('dowork', 'somedata')
-        request.version = '0.0.0'
+        request.version = '200.0.0'
         with self.assertRaises(ValueError) as err_context:
             processor.process_message(MagicMock(), MagicMock(), None, pickle.dumps(request))
-        self.assertEqual(str(err_context.exception), 'Received version mismatch.')
+        self.assertEqual(
+            str(err_context.exception),
+            'Received major version mismatch. request:{} local:{}'.format('200.0.0', processor.version)
+        )
 
     def upgrade_payload(self, work_request, our_version):
         work_request.payload = 'evenbetter'
@@ -146,14 +149,17 @@ class TestDisconnectingWorkQueueProcessor(TestCase):
     def do_work(self, payload):
         self.payload = payload
 
-    def test_default_mismatch_version_raises(self):
+    def test_default_mismatch_major_version_raises(self):
         processor = DisconnectingWorkQueueProcessor(MagicMock(), 'test')
         processor.add_command('dowork', self.do_work)
         request = WorkRequest('dowork', 'somedata')
-        request.version = '0.0.0'
+        request.version = '200.0.0'
         with self.assertRaises(ValueError) as err_context:
             processor.process_message(MagicMock(), MagicMock(), None, pickle.dumps(request))
-        self.assertEqual(str(err_context.exception), 'Received version mismatch.')
+        self.assertEqual(
+            str(err_context.exception),
+            'Received major version mismatch. request:{} local:{}'.format('200.0.0', processor.version)
+        )
 
     def upgrade_payload(self, work_request, our_version):
         work_request.payload = 'evenbetter'
