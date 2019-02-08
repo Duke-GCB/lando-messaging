@@ -31,8 +31,8 @@ class JobCommands(object):
     STORE_JOB_OUTPUT_ERROR = 'store_job_output_error'        # lando_worker -> lando
 
     # only for use with k8s lando/watcher
-    RECORD_OUTPUT_PROJECT_COMPLETE = 'record_output_project_complete'  # lando_worker -> lando
-    RECORD_OUTPUT_PROJECT_ERROR = 'record_output_project_error'        # lando_worker -> lando
+    RECORD_OUTPUT_PROJECT_COMPLETE = 'record_output_project_complete'  # watcher -> lando
+    RECORD_OUTPUT_PROJECT_ERROR = 'record_output_project_error'        # watcher -> lando
 
 
 # Commands that lando will receive.
