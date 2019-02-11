@@ -2,7 +2,7 @@
 from unittest import TestCase, skipIf
 from unittest.mock import patch, Mock, call
 import os
-from lando_messaging.messaging import MessageRouter, LANDO_INCOMING_MESSAGES, LANDO_WORKER_INCOMING_MESSAGES
+from lando_messaging.messaging import MessageRouter, VM_LANDO_INCOMING_MESSAGES, VM_LANDO_WORKER_INCOMING_MESSAGES
 from lando_messaging.messaging import StageJobPayload, RunJobPayload, StoreJobOutputPayload, JobCommands
 from lando_messaging.clients import LandoClient, LandoWorkerClient
 from lando_messaging.workqueue import Config
@@ -84,7 +84,7 @@ class MessageRouterTestCase(TestCase):
     def test_make_lando_router_organize_output_setup(self, mock_work_queue_processor):
         mock_obj = Mock()
         mock_config = Mock()
-        MessageRouter.make_lando_router(mock_config, mock_obj, queue_name='somequeue')
+        MessageRouter.make_k8s_lando_router(mock_config, mock_obj, queue_name='somequeue')
         mock_work_queue_processor.return_value.add_command_by_method_name.assert_has_calls([
             call(JobCommands.ORGANIZE_OUTPUT_COMPLETE, mock_obj),
             call(JobCommands.ORGANIZE_OUTPUT_ERROR, mock_obj),
@@ -168,7 +168,7 @@ class TestMessagingAndClients(TestCase):
         fake_lando.organize_output_complete = record_complete_payload
         fake_lando.organize_output_error = record_error_payload
 
-        router = MessageRouter.make_lando_router(self.config, fake_lando, queue_name)
+        router = MessageRouter.make_k8s_lando_router(self.config, fake_lando, queue_name)
         fake_lando.router = router
 
         run_job_payload = RunJobPayload(job_details=FakeJobDetails(5), workflow=FakeWorkflow(), vm_instance_name='test')
@@ -181,6 +181,35 @@ class TestMessagingAndClients(TestCase):
 
         self.assertEqual(self.organize_output_complete_payload.job_id, 5)
         self.assertEqual(self.organize_output_error_payload.message, "Oops3")
+
+    def test_record_output_project_messages(self):
+        queue_name = "lando"
+        lando_client = LandoClient(self.config, queue_name)
+
+        fake_lando = Mock()
+        self.record_output_project_complete_payload = None
+        def record_output_project_complete(payload):
+            self.record_output_project_complete_payload = payload
+        self.record_output_project_error_payload = None
+        def record_output_project_error(payload):
+            self.record_output_project_error_payload = payload
+            fake_lando.router.shutdown()
+        fake_lando.record_output_project_complete = record_output_project_complete
+        fake_lando.record_output_project_error = record_output_project_error
+
+        router = MessageRouter.make_k8s_lando_router(self.config, fake_lando, queue_name)
+        fake_lando.router = router
+
+        run_job_payload = RunJobPayload(job_details=FakeJobDetails(5), workflow=FakeWorkflow(), vm_instance_name='test')
+        run_job_payload.success_command = JobCommands.RECORD_OUTPUT_PROJECT_COMPLETE
+        run_job_payload.error_command = JobCommands.RECORD_OUTPUT_PROJECT_ERROR
+        lando_client.job_step_complete(run_job_payload)
+        lando_client.job_step_error(run_job_payload, "Oops4")
+
+        router.run()
+
+        self.assertEqual(self.record_output_project_complete_payload.job_id, 5)
+        self.assertEqual(self.record_output_project_error_payload.message, "Oops4")
 
     def test_raises_for_mismatch_job_step_complete(self):
         # job_step_complete should not be used with StoreJobOutputPayload
@@ -211,10 +240,3 @@ class TestMessagingAndClients(TestCase):
         lando_worker_client.store_job_output(credentials=None, job_details=FakeJobDetails(3), vm_instance_name='test3')
 
         router.run()
-        #self.assertEqual(fake_lando_worker.stage_job_payload.job_id, 1)
-        #self.assertEqual(fake_lando_worker.stage_job_payload.vm_instance_name, 'test1')
-        #self.assertEqual(fake_lando_worker.run_job_payload.job_id, 2)
-        #self.assertEqual(fake_lando_worker.run_job_payload.vm_instance_name, 'test2')
-        #self.assertEqual(fake_lando_worker.store_job_output_payload.job_id, 3)
-        #self.assertEqual(fake_lando_worker.store_job_output_payload.vm_instance_name, 'test3')
-
