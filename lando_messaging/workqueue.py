@@ -319,6 +319,7 @@ class DisconnectingWorkQueueProcessor(WorkQueueProcessor):
         """
         while self.receiving_messages:
             # connect to AMQP server and listen for 1 message then disconnect
+            self.work_request = None
             self.connection.receive_loop_with_callback(self.queue_name, self.save_work_request_and_close)
             if self.work_request:
                 self.process_work_request()
