@@ -216,6 +216,25 @@ class TestDisconnectingWorkQueueProcessor(TestCase):
 
         processor.process_messages_loop()
 
+    @patch('lando_messaging.workqueue.WorkQueueConnection')
+    @patch('lando_messaging.workqueue.pickle')
+    def test_not_repeating_last_message_when_queue_deleted(self, mock_pickle, mock_work_queue_connection):
+        processor = DisconnectingWorkQueueProcessor(MagicMock(), 'test2')
+        # setup processor containing previous message
+        processor.work_request = Mock(version=processor.version, command='dostuff')
+
+        def dostuff_callback(payload):
+            self.fail("Callback shouldn't be called when queue is deleted.")
+        processor.add_command('dostuff', dostuff_callback)
+
+        def mock_receive_loop_with_callback(queue_name, func):
+            # terminate loop so it will only run once
+            processor.receiving_messages = False
+        mock_work_queue_connection.return_value.receive_loop_with_callback = mock_receive_loop_with_callback
+
+        processor.process_messages_loop()
+
+
 
 class WorkQueueClientTestCase(TestCase):
     @patch('lando_messaging.workqueue.WorkQueueConnection')
