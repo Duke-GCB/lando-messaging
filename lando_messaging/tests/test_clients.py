@@ -32,7 +32,7 @@ class TestLandoWorkerClient(TestCase):
     def test_run_job(self, mock_work_queue_client):
         lando_worker_client = LandoWorkerClient(MagicMock(), queue_name='lando')
         job_details = FakeJobDetails(123, "FlyRNASeq")
-        workflow = MagicMock(url='', object_name='', job_order='')
+        workflow = MagicMock(workflow_url='', workflow_path='', workflow_type='',  job_order='')
         lando_worker_client.run_job(job_details, workflow, vm_instance_name='vm1')
         args, kwargs = mock_work_queue_client().send.call_args
         command = args[0]

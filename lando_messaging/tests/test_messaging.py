@@ -75,8 +75,9 @@ class FakeLandoWorker(object):
 class FakeWorkflow(object):
     def __init__(self):
         self.job_order = ''
-        self.url = ''
-        self.object_name = ''
+        self.workflow_url = ''
+        self.workflow_path = ''
+        self.workflow_type = ''
 
 
 class MessageRouterTestCase(TestCase):
