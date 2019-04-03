@@ -217,7 +217,7 @@ class RunJobPayload(object):
         """
         self.job_id = job_details.id
         self.job_details = job_details
-        self.workflow_url = workflow.url
+        self.workflow_url = workflow.workflow_url
         self.workflow_path = workflow.workflow_path
         self.workflow_type = workflow.workflow_type
         self.job_order = workflow.job_order
