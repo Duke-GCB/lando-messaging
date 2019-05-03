@@ -8,6 +8,7 @@ from lando_messaging.messaging import StartJobPayload, RestartJobPayload, Cancel
 from lando_messaging.messaging import JobStepCompletePayload, JobStepErrorPayload
 from lando_messaging.messaging import JobStepStoreOutputCompletePayload
 from lando_messaging.messaging import StageJobPayload, RunJobPayload, StoreJobOutputPayload
+from lando_messaging.messaging import OrganizeOutputProjectPayload
 from lando_messaging.messaging import WorkerStartedPayload
 from lando_messaging.workqueue import WorkQueueClient
 
@@ -128,6 +129,15 @@ class LandoWorkerClient(object):
         :param vm_instance_name: name of the instance lando_worker is running on (this passed back in the response)
         """
         self._send(JobCommands.RUN_JOB, RunJobPayload(job_details, workflow, vm_instance_name))
+
+    def organize_output_project(self, job_details, vm_instance_name):
+        """
+        Store the output of a finished job.
+        :param job_details: object: details about job(id, name, created date, workflow version)
+        :param vm_instance_name: name of the instance lando_worker is running on (this passed back in the response)
+        """
+        payload = OrganizeOutputProjectPayload(job_details, vm_instance_name)
+        self._send(JobCommands.ORGANIZE_OUTPUT, payload)
 
     def store_job_output(self, credentials, job_details, vm_instance_name):
         """

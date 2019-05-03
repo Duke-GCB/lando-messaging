@@ -67,6 +67,9 @@ class FakeLandoWorker(object):
     def run_job(self, payload):
         self.run_job_payload = payload
 
+    def organize_output(self, payload):
+        self.organize_output_payload = payload
+
     def store_job_output(self, payload):
         self.store_job_output_payload = payload
         self.router.shutdown()

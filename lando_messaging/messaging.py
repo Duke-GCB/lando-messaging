@@ -22,9 +22,9 @@ class JobCommands(object):
     RUN_JOB_COMPLETE = 'run_job_complete'                    # lando_worker -> lando
     RUN_JOB_ERROR = 'run_job_error'                          # lando_worker -> lando
 
-    # only for use with k8s lando/watcher
-    ORGANIZE_OUTPUT_COMPLETE = 'organize_output_complete'    # watcher -> lando
-    ORGANIZE_OUTPUT_ERROR = 'organize_output_error'          # watcher -> lando
+    ORGANIZE_OUTPUT = 'organize_output'                      # lando -> lando_worker
+    ORGANIZE_OUTPUT_COMPLETE = 'organize_output_complete'    # lando_worker/watcher -> lando
+    ORGANIZE_OUTPUT_ERROR = 'organize_output_error'          # lando_worker/watcher -> lando
 
     STORE_JOB_OUTPUT = 'store_job_output'                    # lando -> lando_worker
     STORE_JOB_OUTPUT_COMPLETE = 'store_job_output_complete'  # lando_worker -> lando
@@ -45,6 +45,8 @@ VM_LANDO_INCOMING_MESSAGES = [
     JobCommands.STAGE_JOB_ERROR,
     JobCommands.RUN_JOB_COMPLETE,
     JobCommands.RUN_JOB_ERROR,
+    JobCommands.ORGANIZE_OUTPUT_COMPLETE,
+    JobCommands.ORGANIZE_OUTPUT_ERROR,
     JobCommands.STORE_JOB_OUTPUT_COMPLETE,
     JobCommands.STORE_JOB_OUTPUT_ERROR,
 ]
@@ -53,6 +55,7 @@ VM_LANDO_INCOMING_MESSAGES = [
 VM_LANDO_WORKER_INCOMING_MESSAGES = [
     JobCommands.STAGE_JOB,
     JobCommands.RUN_JOB,
+    JobCommands.ORGANIZE_OUTPUT,
     JobCommands.STORE_JOB_OUTPUT,
 ]
 
@@ -224,6 +227,23 @@ class RunJobPayload(object):
         self.success_command = JobCommands.RUN_JOB_COMPLETE
         self.error_command = JobCommands.RUN_JOB_ERROR
         self.job_description = "Running workflow"
+
+
+class OrganizeOutputProjectPayload(object):
+    """
+    Payload to be sent with JobCommands.STORE_JOB_OUTPUT to lando_worker.
+    """
+    def __init__(self, job_details, vm_instance_name):
+        """
+        :param job_details: object: details about job(id, name, created date, workflow version)
+        :param vm_instance_name: name of the instance lando_worker is running on (this passed back in the response)
+        """
+        self.job_id = job_details.id
+        self.job_details = job_details
+        self.vm_instance_name = vm_instance_name
+        self.success_command = JobCommands.ORGANIZE_OUTPUT_COMPLETE
+        self.error_command = JobCommands.ORGANIZE_OUTPUT_ERROR
+        self.job_description = "Organize output project"
 
 
 class StoreJobOutputPayload(object):
