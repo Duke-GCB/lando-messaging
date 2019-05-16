@@ -232,7 +232,7 @@ class RunJobPayload(object):
 
 class OrganizeOutputProjectPayload(object):
     """
-    Payload to be sent with JobCommands.STORE_JOB_OUTPUT to lando_worker.
+    Payload to be sent with JobCommands.ORGANIZE_OUTPUT to lando_worker.
     """
     def __init__(self, job_details, vm_instance_name):
         """
