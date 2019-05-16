@@ -132,7 +132,7 @@ class LandoWorkerClient(object):
 
     def organize_output_project(self, job_details, vm_instance_name):
         """
-        Store the output of a finished job.
+        Organize output project directory
         :param job_details: object: details about job(id, name, created date, workflow version)
         :param vm_instance_name: name of the instance lando_worker is running on (this passed back in the response)
         """
