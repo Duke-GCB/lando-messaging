@@ -83,8 +83,7 @@ class TestWorkProgressQueue(TestCase):
 
     def test_work_progress_queue_can_send_json_message(self):
         wpq = WorkProgressQueue(self.config, "job_status")
-        result = wpq.send('{"job":16, "status":"GOOD"}')
-        self.assertEqual(True, result)
+        wpq.send('{"job":16, "status":"GOOD"}')
 
 
 class TestGetVersionStr(TestCase):

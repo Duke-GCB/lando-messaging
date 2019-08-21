@@ -352,11 +352,9 @@ class WorkProgressQueue(object):
         Send a payload to exchange to containing command and payload to the queue specified in config.
         :param command: str: name of the command we want run by WorkQueueProcessor
         :param payload: str: string data that will be put into the exchange's message body
-        :return Bool: True when delivery confirmed
         """
-        result = self.connection.send_durable_exchange_message(self.exchange_name, payload)
+        self.connection.send_durable_exchange_message(self.exchange_name, payload)
         logging.info("Sent message to exchange.".format(self.exchange_name))
-        return result
 
 
 class Config(object):
