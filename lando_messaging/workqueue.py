@@ -57,7 +57,7 @@ class WorkQueueConnection(object):
         credentials = pika.PlainCredentials(self.username, self.password)
         connection_params = pika.ConnectionParameters(host=self.host,
                                                       credentials=credentials,
-                                                      heartbeat_interval=self.heartbeat_interval)
+                                                      heartbeat=self.heartbeat_interval)
         self.connection = pika.BlockingConnection(connection_params)
 
     def close(self):
@@ -116,7 +116,7 @@ class WorkQueueConnection(object):
         self.connect()
         channel = self.connection.channel()
         # Fanout will send message to multiple subscribers
-        channel.exchange_declare(exchange=exchange_name, type='fanout')
+        channel.exchange_declare(exchange=exchange_name, exchange_type='fanout')
         result = channel.basic_publish(exchange=exchange_name, routing_key='', body=body,
                                        properties=pika.BasicProperties(
                                            delivery_mode=2,  # make message persistent
@@ -134,7 +134,7 @@ class WorkQueueConnection(object):
         self.connect()
         channel = self.create_channel(queue_name)
         channel.basic_qos(prefetch_count=1)
-        channel.basic_consume(callback, queue=queue_name)
+        channel.basic_consume(queue=queue_name, on_message_callback=callback)
         channel.start_consuming()
 
 
@@ -352,11 +352,9 @@ class WorkProgressQueue(object):
         Send a payload to exchange to containing command and payload to the queue specified in config.
         :param command: str: name of the command we want run by WorkQueueProcessor
         :param payload: str: string data that will be put into the exchange's message body
-        :return Bool: True when delivery confirmed
         """
-        result = self.connection.send_durable_exchange_message(self.exchange_name, payload)
+        self.connection.send_durable_exchange_message(self.exchange_name, payload)
         logging.info("Sent message to exchange.".format(self.exchange_name))
-        return result
 
 
 class Config(object):

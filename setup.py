@@ -9,6 +9,6 @@ setup(name='lando-messaging',
       license='MIT',
       packages=['lando_messaging'],
       install_requires=[
-         'pika==0.10.0',
+         'pika==1.1.0',
       ],
      )
