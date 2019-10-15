@@ -34,6 +34,9 @@ class JobCommands(object):
     RECORD_OUTPUT_PROJECT_COMPLETE = 'record_output_project_complete'  # watcher -> lando
     RECORD_OUTPUT_PROJECT_ERROR = 'record_output_project_error'        # watcher -> lando
 
+    START_DEBUG = 'start_debug'                              # webserver -> lando
+    CANCEL_DEBUG = 'cancel_debug'                            # webserver -> lando
+
 
 # Commands that lando will receive.
 VM_LANDO_INCOMING_MESSAGES = [
@@ -73,6 +76,8 @@ K8S_LANDO_INCOMING_MESSAGES = [
     JobCommands.STORE_JOB_OUTPUT_ERROR,
     JobCommands.RECORD_OUTPUT_PROJECT_COMPLETE,
     JobCommands.RECORD_OUTPUT_PROJECT_ERROR,
+    JobCommands.START_DEBUG,
+    JobCommands.CANCEL_DEBUG,
 ]
 
 
@@ -297,3 +302,27 @@ class JobStepErrorPayload(object):
         self.job_id = payload.job_id
         self.vm_instance_name = payload.vm_instance_name
         self.message = message
+
+
+class StartDebugPayload(object):
+    """
+    Payload to be sent with JobCommands.START_DEBUG to lando.
+    """
+    def __init__(self, job_id, job_username):
+        """
+        :param job_id: int: job id we want to setup debugging for
+        """
+        self.job_id = job_id
+        self.job_username = job_username
+
+
+class CancelDebugPayload(object):
+    """
+    Payload to be sent with JobCommands.CANCEL_DEBUG to lando.
+    """
+
+    def __init__(self, job_id):
+        """
+        :param job_id: int: job id we want to have cancel debugging for
+        """
+        self.job_id = job_id

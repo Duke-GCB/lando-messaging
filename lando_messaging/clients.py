@@ -10,6 +10,7 @@ from lando_messaging.messaging import JobStepStoreOutputCompletePayload
 from lando_messaging.messaging import StageJobPayload, RunJobPayload, StoreJobOutputPayload
 from lando_messaging.messaging import OrganizeOutputProjectPayload
 from lando_messaging.messaging import WorkerStartedPayload
+from lando_messaging.messaging import StartDebugPayload, CancelDebugPayload
 from lando_messaging.workqueue import WorkQueueClient
 
 
@@ -96,6 +97,21 @@ class LandoClient(object):
         """
         payload = JobStepErrorPayload(job_request_payload, message)
         self.send(job_request_payload.error_command, payload)
+
+
+    def start_debug(self, job_id):
+        """
+        Post a message in the queue to have a debug server created for a job.
+        :param job_id: int:  unique id for a job
+        """
+        self.send(JobCommands.START_DEBUG, StartDebugPayload(job_id))
+
+    def cancel_debug(self, job_id):
+        """
+        Post a message in the queue to delete the debug server for a job.
+        :param job_id: int:  unique id for a job
+        """
+        self.send(JobCommands.CANCEL_DEBUG, CancelDebugPayload(job_id))
 
 
 class LandoWorkerClient(object):
