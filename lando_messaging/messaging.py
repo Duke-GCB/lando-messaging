@@ -308,12 +308,11 @@ class StartDebugPayload(object):
     """
     Payload to be sent with JobCommands.START_DEBUG to lando.
     """
-    def __init__(self, job_id, job_username):
+    def __init__(self, job_id):
         """
         :param job_id: int: job id we want to setup debugging for
         """
         self.job_id = job_id
-        self.job_username = job_username
 
 
 class CancelDebugPayload(object):
