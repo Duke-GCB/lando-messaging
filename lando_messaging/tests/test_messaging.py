@@ -244,3 +244,19 @@ class TestMessagingAndClients(TestCase):
         lando_worker_client.store_job_output(credentials=None, job_details=FakeJobDetails(3), vm_instance_name='test3')
 
         router.run()
+
+    def test_k8s_lando_router_start_debug(self):
+        mock_target = Mock()
+        router = MessageRouter.make_k8s_lando_router(self.config, mock_target, Mock())
+        work_request = Mock(version=router.processor.version, command=JobCommands.START_DEBUG)
+        router.processor.work_request = work_request
+        router.processor.process_work_request()
+        mock_target.start_debug.assert_called_with(work_request.payload)
+
+    def test_k8s_lando_router_cancel_debug(self):
+        mock_target = Mock()
+        router = MessageRouter.make_k8s_lando_router(self.config, mock_target, Mock())
+        work_request = Mock(version=router.processor.version, command=JobCommands.CANCEL_DEBUG)
+        router.processor.work_request = work_request
+        router.processor.process_work_request()
+        mock_target.cancel_debug.assert_called_with(work_request.payload)
